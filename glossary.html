@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Glossary · ML Notes</title>
+<meta name="description" content="Every term used in the course, defined in one line.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,400&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']] },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+  };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css">
+</head>
+<body data-page="glossary">
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="index.html">ML<span>.</span>Notes</a>
+    <nav class="topnav">
+      <a href="index.html">Home</a>
+      <a href="topics/01-framework.html">Chapters</a>
+      <a href="visualizers.html">Visualizers</a>
+      <a href="practice.html">Practice</a>
+      <a href="glossary.html">Glossary</a>
+    </nav>
+    <div class="searchbox">
+      <input id="search-input" type="search" placeholder="Search topics…  ( / )" autocomplete="off" aria-label="Search the textbook">
+      <div class="searchresults" id="search-results"></div>
+    </div>
+  </div>
+</header>
+<div class="shell">
+<nav class="sidebar" aria-label="Chapter navigation">
+<div class="side-group">Foundations</div>
+<a href="topics/01-framework.html" data-topic-id="topic-01-framework">01 · The Machine-Learning Framework</a>
+<div class="side-group">Supervised Learning — Regression</div>
+<a href="topics/02-linear-regression.html" data-topic-id="topic-02-linear-regression">02 · Linear Regression and Gradient Descent</a>
+<a href="topics/03-regression-metrics.html" data-topic-id="topic-03-regression-metrics">03 · Regression Metrics</a>
+<a href="topics/04-bias-variance.html" data-topic-id="topic-04-bias-variance">04 · Bias, Variance and Regularisation</a>
+<div class="side-group">Supervised Learning — Classification</div>
+<a href="topics/05-logistic-regression.html" data-topic-id="topic-05-logistic-regression">05 · Logistic Regression</a>
+<a href="topics/06-naive-bayes.html" data-topic-id="topic-06-naive-bayes">06 · Naive Bayes</a>
+<a href="topics/07-decision-trees.html" data-topic-id="topic-07-decision-trees">07 · Decision Trees</a>
+<a href="topics/08-knn.html" data-topic-id="topic-08-knn">08 · K-Nearest Neighbours</a>
+<a href="topics/09-classification-metrics.html" data-topic-id="topic-09-classification-metrics">09 · Classification Metrics</a>
+<a href="topics/10-svm.html" data-topic-id="topic-10-svm">10 · Support Vector Machines</a>
+<div class="side-group">Unsupervised Learning — Clustering</div>
+<a href="topics/11-kmeans.html" data-topic-id="topic-11-kmeans">11 · k-Means Clustering</a>
+<a href="topics/12-dbscan.html" data-topic-id="topic-12-dbscan">12 · DBSCAN</a>
+<a href="topics/13-optics.html" data-topic-id="topic-13-optics">13 · OPTICS</a>
+<a href="topics/14-hierarchical.html" data-topic-id="topic-14-hierarchical">14 · Hierarchical Clustering</a>
+<div class="side-group">Tools</div>
+<a href="visualizers.html">Interactive Visualizers</a>
+<a href="practice.html">Practice and Examination Questions</a>
+<a href="glossary.html" class="active">Glossary</a>
+</nav>
+<main>
+<div class="kicker">Tool</div>
+<h1>Glossary</h1>
+<p class="lede">Every term used in the course, defined in one line.</p>
+<p>Every term used in the course, in one line, grouped by module.</p>
+
+<h2 id="g1">Foundations and regression</h2>
+<dl class="glossary">
+<dt>Bias</dt><dd>Error from wrong assumptions in the model; the gap between average prediction and truth.</dd>
+<dt>Cost function</dt><dd>The loss averaged over the training set; what training minimises.</dd>
+<dt>Elastic Net</dt><dd>Regularisation combining the L1 and L2 penalties.</dd>
+<dt>Feature</dt><dd>A measured input variable; one column of the data table.</dd>
+<dt>Gradient descent</dt><dd>Iteratively stepping against the gradient of the cost to reach a minimum.</dd>
+<dt>Hyperparameter</dt><dd>A setting chosen before training (learning rate, k, λ, C) rather than learned.</dd>
+<dt>Inductive bias</dt><dd>The set of functions a model can represent — what it can never learn.</dd>
+<dt>Label</dt><dd>The target answer for one training row.</dd>
+<dt>Lasso (L1)</dt><dd>Regularisation penalising the sum of absolute coefficients; drives some to exactly zero.</dd>
+<dt>Learning rate (α)</dt><dd>Step size in gradient descent. Too small is slow, too large diverges.</dd>
+<dt>Linear regression</dt><dd>Fitting a linear function by minimising mean squared error.</dd>
+<dt>MAE</dt><dd>Mean absolute error; same units as the target, robust to outliers.</dd>
+<dt>MSE</dt><dd>Mean squared error; penalises large errors heavily.</dd>
+<dt>Overfitting</dt><dd>Low training error, high test error — the model has memorised noise.</dd>
+<dt>R²</dt><dd>Proportion of variance explained relative to predicting the mean. Range \((-\infty, 1]\).</dd>
+<dt>Regularisation</dt><dd>Adding a penalty on coefficient size to reduce variance.</dd>
+<dt>Ridge (L2)</dt><dd>Regularisation penalising the sum of squared coefficients; shrinks smoothly, never to zero.</dd>
+<dt>RMSE</dt><dd>Square root of MSE; same units as the target.</dd>
+<dt>Underfitting</dt><dd>High training and test error — the model is too simple.</dd>
+<dt>Variance</dt><dd>Error from sensitivity to the particular training sample.</dd>
+</dl>
+
+<h2 id="g2">Classification</h2>
+<dl class="glossary">
+<dt>Accuracy</dt><dd>(TP + TN) / total. Misleading on imbalanced data.</dd>
+<dt>Confusion matrix</dt><dd>The 2×2 table of TP, FP, FN, TN.</dd>
+<dt>Decision boundary</dt><dd>The surface separating predicted classes.</dd>
+<dt>Decision tree</dt><dd>A model that splits the feature space by a sequence of tests.</dd>
+<dt>Entropy</dt><dd>Impurity measure, \(-\sum p_i\log_2 p_i\). Zero for a pure node, 1 for a 50/50 binary split.</dd>
+<dt>F1 score</dt><dd>Harmonic mean of precision and recall.</dd>
+<dt>Gini impurity</dt><dd>\(1-\sum p_i^2\); an impurity measure cheaper than entropy.</dd>
+<dt>Hyperplane</dt><dd>A flat decision surface: a point in 1-D, a line in 2-D, a plane in 3-D.</dd>
+<dt>Information gain</dt><dd>Entropy before a split minus the weighted entropy after it.</dd>
+<dt>Kernel trick</dt><dd>Computing inner products in a higher-dimensional space without forming the coordinates.</dd>
+<dt>KNN</dt><dd>k-nearest neighbours; a lazy learner that classifies by a vote among the k closest training points.</dd>
+<dt>Laplace smoothing</dt><dd>Adding a small count to every cell so no likelihood is exactly zero.</dd>
+<dt>Lazy learner</dt><dd>A model that does no work at training time and all of it at prediction time.</dd>
+<dt>Log-loss</dt><dd>Binary cross-entropy; the standard cost for probabilistic classifiers.</dd>
+<dt>Margin</dt><dd>Distance from the decision boundary to the nearest training point.</dd>
+<dt>Naive Bayes</dt><dd>A classifier applying Bayes' theorem with a conditional-independence assumption between features.</dd>
+<dt>Posterior</dt><dd>Probability of a class given the features — what we want.</dd>
+<dt>Precision</dt><dd>TP / (TP + FP) — of what I flagged, how much was right.</dd>
+<dt>Prior</dt><dd>Class frequency before seeing any features.</dd>
+<dt>Recall</dt><dd>TP / (TP + FN) — of what was positive, how much I caught.</dd>
+<dt>Sigmoid</dt><dd>\(\sigma(z) = 1/(1+e^{-z})\); squashes a real number into (0,1).</dd>
+<dt>Soft margin</dt><dd>An SVM that tolerates margin violations at a cost set by C.</dd>
+<dt>Softmax</dt><dd>Generalisation of the sigmoid to more than two classes.</dd>
+<dt>Support vector</dt><dd>A training point on or inside the margin; these alone determine the boundary.</dd>
+<dt>SVM</dt><dd>Support vector machine; maximises the margin between two classes.</dd>
+</dl>
+
+<h2 id="g3">Clustering</h2>
+<dl class="glossary">
+<dt>Agglomerative</dt><dd>Bottom-up hierarchical clustering: start with singletons and merge.</dd>
+<dt>Border point</dt><dd>In DBSCAN, a non-core point inside the neighbourhood of a core point.</dd>
+<dt>Centroid</dt><dd>The mean of the points in a cluster.</dd>
+<dt>Chaining</dt><dd>Single linkage joining clusters through a chain of intermediate points.</dd>
+<dt>Complete linkage</dt><dd>Cluster distance = maximum over cross pairs.</dd>
+<dt>Core distance</dt><dd>In OPTICS, the distance from a point to its MinPts-th nearest neighbour.</dd>
+<dt>Core point</dt><dd>In DBSCAN, a point with at least MinPts neighbours within eps.</dd>
+<dt>DBSCAN</dt><dd>Density-based clustering using a global eps and MinPts; labels noise explicitly.</dd>
+<dt>Dendrogram</dt><dd>The tree diagram produced by hierarchical clustering, with merge height on the vertical axis.</dd>
+<dt>Density-reachable</dt><dd>Reachable through a chain of core points.</dd>
+<dt>Divisive</dt><dd>Top-down hierarchical clustering: start with everything and split.</dd>
+<dt>Elbow method</dt><dd>Plotting SSE against k and looking for the point where it flattens.</dd>
+<dt>eps (ε)</dt><dd>The neighbourhood radius in DBSCAN and OPTICS.</dd>
+<dt>Hierarchical clustering</dt><dd>Producing a nested sequence of clusterings rather than a single partition.</dd>
+<dt>k-means</dt><dd>Partitioning into k clusters by alternating assignment and centroid updates.</dd>
+<dt>k-means++</dt><dd>Seeding that spreads initial centroids apart, reducing bad local optima.</dd>
+<dt>Linkage</dt><dd>How distance between two clusters is defined: single, complete, average or Ward.</dd>
+<dt>MinPts</dt><dd>The minimum neighbourhood size for a point to count as dense.</dd>
+<dt>Noise point</dt><dd>Neither core nor border; belongs to no cluster.</dd>
+<dt>OPTICS</dt><dd>Orders points by reachability so clusters of any density can be extracted.</dd>
+<dt>Reachability distance</dt><dd>In OPTICS, the max of the predecessor's core distance and the pair distance.</dd>
+<dt>Reachability plot</dt><dd>The OPTICS output plotted in ordering order; valleys are clusters.</dd>
+<dt>Silhouette</dt><dd>A per-point score comparing cohesion within a cluster against separation from the next nearest.</dd>
+<dt>Single linkage</dt><dd>Cluster distance = minimum over cross pairs; prone to chaining.</dd>
+<dt>SSE / inertia</dt><dd>Sum of squared distances from each point to its centroid; the k-means objective.</dd>
+<dt>Ward linkage</dt><dd>Merging whichever pair increases within-cluster variance least.</dd>
+</dl>
+
+<footer style="margin-top:56px;padding-top:22px;border-top:1px solid var(--rule);font-size:13px;color:var(--ink-3)">
+  <p style="margin:0 0 6px"><strong style="color:var(--ink-2)">Machine Learning</strong> — an interactive textbook built from the class notes of 27 Aug – 26 Oct 2026, with Alpaydin and Géron as references.</p>
+  <p style="margin:0">Progress is saved in this browser only. <a href="glossary.html">Glossary</a> · <a href="practice.html">Practice</a> · <a href="visualizers.html">Visualizers</a></p>
+</footer>
+</main>
+</div>
+<script>window.ML_SEARCH = [{"title": "01 · The Machine-Learning Framework", "topic": "Chapter", "url": "topics/01-framework.html", "keywords": "machine learning, supervised, unsupervised, reinforcement, train test split, workflow What it means to learn from data, and how the whole subject divides."}, {"title": "02 · Linear Regression and Gradient Descent", "topic": "Chapter", "url": "topics/02-linear-regression.html", "keywords": "linear regression, hypothesis, cost function, gradient descent, learning rate, MSE Fitting a line by minimising squared error, and how gradient descent finds the minimum."}, {"title": "03 · Regression Metrics", "topic": "Chapter", "url": "topics/03-regression-metrics.html", "keywords": "MSE, MAE, RMSE, R squared, coefficient of determination, SSres, SStot MSE, MAE, RMSE and R-squared: what each one rewards and punishes."}, {"title": "04 · Bias, Variance and Regularisation", "topic": "Chapter", "url": "topics/04-bias-variance.html", "keywords": "bias, variance, underfitting, overfitting, regularisation, Lasso, Ridge, Elastic Net, L1, L2 Why a model that fits the training data perfectly can be worse than one that does not."}, {"title": "05 · Logistic Regression", "topic": "Chapter", "url": "topics/05-logistic-regression.html", "keywords": "logistic regression, sigmoid, log odds, decision boundary, log loss, cross entropy Turning a linear model into a classifier with the sigmoid and log-loss."}, {"title": "06 · Naive Bayes", "topic": "Chapter", "url": "topics/06-naive-bayes.html", "keywords": "naive bayes, Bayes theorem, prior, likelihood, posterior, evidence, Laplace smoothing Classification by Bayes theorem under a deliberately naive independence assumption."}, {"title": "07 · Decision Trees", "topic": "Chapter", "url": "topics/07-decision-trees.html", "keywords": "decision tree, entropy, information gain, Gini impurity, ID3, pruning Splitting the feature space by whichever question reduces impurity the most."}, {"title": "08 · K-Nearest Neighbours", "topic": "Chapter", "url": "topics/08-knn.html", "keywords": "KNN, k nearest neighbours, Euclidean distance, majority vote, lazy learner, curse of dimensionality The laziest classifier there is: look at the neighbours and take a vote."}, {"title": "09 · Classification Metrics", "topic": "Chapter", "url": "topics/09-classification-metrics.html", "keywords": "confusion matrix, accuracy, precision, recall, F1, sensitivity, specificity The confusion matrix, and why accuracy alone can be dangerously misleading."}, {"title": "10 · Support Vector Machines", "topic": "Chapter", "url": "topics/10-svm.html", "keywords": "SVM, support vector machine, hyperplane, margin, hard margin, soft margin, dual, kernel Finding the widest street between two classes, and the kernel trick for when a line will not do."}, {"title": "11 · k-Means Clustering", "topic": "Chapter", "url": "topics/11-kmeans.html", "keywords": "k-means, clustering, centroid, Lloyd, SSE, elbow method, unsupervised Partitioning points into k groups by alternating assignment and centroid updates."}, {"title": "12 · DBSCAN", "topic": "Chapter", "url": "topics/12-dbscan.html", "keywords": "DBSCAN, density, eps, minPts, core point, border point, noise, clustering Density-based clustering: find dense regions and label the rest as noise."}, {"title": "13 · OPTICS", "topic": "Chapter", "url": "topics/13-optics.html", "keywords": "OPTICS, reachability, core distance, ordering, density, clustering, variable density Ordering points by reachability so clusters of different densities all show up."}, {"title": "14 · Hierarchical Clustering", "topic": "Chapter", "url": "topics/14-hierarchical.html", "keywords": "hierarchical, agglomerative, divisive, dendrogram, linkage, single, complete, average, ward Building a nested tree of clusters bottom-up or top-down, and reading it as a dendrogram."}, {"title": "Interactive Visualizers", "topic": "Tool", "url": "visualizers.html", "keywords": "Gradient descent, k-means, the metrics calculator and an entropy explorer."}, {"title": "Practice and Examination Questions", "topic": "Tool", "url": "practice.html", "keywords": "Graded questions with full worked solutions."}, {"title": "Glossary", "topic": "Tool", "url": "glossary.html", "keywords": "Every term used in the course, defined in one line."}, {"title": "What it means to learn from data", "topic": "Ch 01", "url": "topics/01-framework.html#what", "keywords": "What it means to learn from data"}, {"title": "The three learning types", "topic": "Ch 01", "url": "topics/01-framework.html#types", "keywords": "The three learning types"}, {"title": "The anatomy of a learning problem", "topic": "Ch 01", "url": "topics/01-framework.html#anatomy", "keywords": "The anatomy of a learning problem"}, {"title": "The workflow, and where it goes wrong", "topic": "Ch 01", "url": "topics/01-framework.html#workflow", "keywords": "The workflow, and where it goes wrong"}, {"title": "Check your understanding", "topic": "Ch 01", "url": "topics/01-framework.html#check", "keywords": "Check your understanding"}, {"title": "The hypothesis", "topic": "Ch 02", "url": "topics/02-linear-regression.html#hypothesis", "keywords": "The hypothesis"}, {"title": "The cost function", "topic": "Ch 02", "url": "topics/02-linear-regression.html#cost", "keywords": "The cost function"}, {"title": "The gradient", "topic": "Ch 02", "url": "topics/02-linear-regression.html#gradient", "keywords": "The gradient"}, {"title": "The update rule", "topic": "Ch 02", "url": "topics/02-linear-regression.html#gd", "keywords": "The update rule"}, {"title": "Implementation", "topic": "Ch 02", "url": "topics/02-linear-regression.html#python", "keywords": "Implementation"}, {"title": "Three practical notes", "topic": "Ch 02", "url": "topics/02-linear-regression.html#pitfalls", "keywords": "Three practical notes"}, {"title": "Check your understanding", "topic": "Ch 02", "url": "topics/02-linear-regression.html#check", "keywords": "Check your understanding"}, {"title": "Why one number is not enough", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#why", "keywords": "Why one number is not enough"}, {"title": "Mean squared error", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#mse", "keywords": "Mean squared error"}, {"title": "Mean absolute error", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#mae", "keywords": "Mean absolute error"}, {"title": "Root mean squared error", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#rmse", "keywords": "Root mean squared error"}, {"title": "Coefficient of determination", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#r2", "keywords": "Coefficient of determination"}, {"title": "Check your understanding", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#check", "keywords": "Check your understanding"}, {"title": "Bias and variance defined", "topic": "Ch 04", "url": "topics/04-bias-variance.html#defs", "keywords": "Bias and variance defined"}, {"title": "Underfitting and overfitting", "topic": "Ch 04", "url": "topics/04-bias-variance.html#underover", "keywords": "Underfitting and overfitting"}, {"title": "Regularisation", "topic": "Ch 04", "url": "topics/04-bias-variance.html#reg", "keywords": "Regularisation"}, {"title": "Check your understanding", "topic": "Ch 04", "url": "topics/04-bias-variance.html#check", "keywords": "Check your understanding"}, {"title": "Why linear regression cannot be reused", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#why", "keywords": "Why linear regression cannot be reused"}, {"title": "The sigmoid", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#sigmoid", "keywords": "The sigmoid"}, {"title": "Odds and log-odds", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#odds", "keywords": "Odds and log-odds"}, {"title": "The decision boundary", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#boundary", "keywords": "The decision boundary"}, {"title": "The cost function, and why not squared error", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#cost", "keywords": "The cost function, and why not squared error"}, {"title": "The gradient", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#gradient", "keywords": "The gradient"}, {"title": "More than two classes", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#multiclass", "keywords": "More than two classes"}, {"title": "Check your understanding", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#check", "keywords": "Check your understanding"}, {"title": "Classification by probability", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#idea", "keywords": "Classification by probability"}, {"title": "The naive assumption", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#assumption", "keywords": "The naive assumption"}, {"title": "Worked example — the Play Tennis dataset", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#worked", "keywords": "Worked example — the Play Tennis dataset"}, {"title": "The zero-frequency problem", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#zero", "keywords": "The zero-frequency problem"}, {"title": "Continuous features", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#continuous", "keywords": "Continuous features"}, {"title": "Implementation", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#code", "keywords": "Implementation"}, {"title": "Check your understanding", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#check", "keywords": "Check your understanding"}, {"title": "Splitting the feature space", "topic": "Ch 07", "url": "topics/07-decision-trees.html#idea", "keywords": "Splitting the feature space"}, {"title": "Entropy", "topic": "Ch 07", "url": "topics/07-decision-trees.html#entropy", "keywords": "Entropy"}, {"title": "Information gain", "topic": "Ch 07", "url": "topics/07-decision-trees.html#ig", "keywords": "Information gain"}, {"title": "Worked example — the Tennis root node", "topic": "Ch 07", "url": "topics/07-decision-trees.html#worked", "keywords": "Worked example — the Tennis root node"}, {"title": "Gini impurity", "topic": "Ch 07", "url": "topics/07-decision-trees.html#gini", "keywords": "Gini impurity"}, {"title": "Pruning", "topic": "Ch 07", "url": "topics/07-decision-trees.html#pruning", "keywords": "Pruning"}, {"title": "Check your understanding", "topic": "Ch 07", "url": "topics/07-decision-trees.html#check", "keywords": "Check your understanding"}, {"title": "The laziest classifier", "topic": "Ch 08", "url": "topics/08-knn.html#idea", "keywords": "The laziest classifier"}, {"title": "The distance metric", "topic": "Ch 08", "url": "topics/08-knn.html#distance", "keywords": "The distance metric"}, {"title": "Worked example", "topic": "Ch 08", "url": "topics/08-knn.html#worked", "keywords": "Worked example"}, {"title": "Choosing k", "topic": "Ch 08", "url": "topics/08-knn.html#k", "keywords": "Choosing k"}, {"title": "Implementation", "topic": "Ch 08", "url": "topics/08-knn.html#code", "keywords": "Implementation"}, {"title": "Check your understanding", "topic": "Ch 08", "url": "topics/08-knn.html#check", "keywords": "Check your understanding"}, {"title": "The confusion matrix", "topic": "Ch 09", "url": "topics/09-classification-metrics.html#cm", "keywords": "The confusion matrix"}, {"title": "The four metrics", "topic": "Ch 09", "url": "topics/09-classification-metrics.html#metrics", "keywords": "The four metrics"}, {"title": "Worked example", "topic": "Ch 09", "url": "topics/09-classification-metrics.html#worked", "keywords": "Worked example"}, {"title": "Why accuracy alone is not enough", "topic": "Ch 09", "url": "topics/09-classification-metrics.html#accuracy", "keywords": "Why accuracy alone is not enough"}, {"title": "Check your understanding", "topic": "Ch 09", "url": "topics/09-classification-metrics.html#check", "keywords": "Check your understanding"}, {"title": "The widest street", "topic": "Ch 10", "url": "topics/10-svm.html#idea", "keywords": "The widest street"}, {"title": "The equation of a hyperplane", "topic": "Ch 10", "url": "topics/10-svm.html#equation", "keywords": "The equation of a hyperplane"}, {"title": "Maximising the margin", "topic": "Ch 10", "url": "topics/10-svm.html#margin", "keywords": "Maximising the margin"}, {"title": "The hard-margin objective", "topic": "Ch 10", "url": "topics/10-svm.html#hard", "keywords": "The hard-margin objective"}, {"title": "The dual formulation", "topic": "Ch 10", "url": "topics/10-svm.html#dual", "keywords": "The dual formulation"}, {"title": "The soft margin", "topic": "Ch 10", "url": "topics/10-svm.html#soft", "keywords": "The soft margin"}, {"title": "The kernel trick", "topic": "Ch 10", "url": "topics/10-svm.html#kernel", "keywords": "The kernel trick"}, {"title": "Check your understanding", "topic": "Ch 10", "url": "topics/10-svm.html#check", "keywords": "Check your understanding"}, {"title": "The problem k-means solves", "topic": "Ch 11", "url": "topics/11-kmeans.html#problem", "keywords": "The problem k-means solves"}, {"title": "The algorithm, step by step", "topic": "Ch 11", "url": "topics/11-kmeans.html#algorithm", "keywords": "The algorithm, step by step"}, {"title": "Solved example 1 — two dimensions, k = 2", "topic": "Ch 11", "url": "topics/11-kmeans.html#ex1", "keywords": "Solved example 1 — two dimensions, k = 2"}, {"title": "Solved example 2 — one dimension, k = 2", "topic": "Ch 11", "url": "topics/11-kmeans.html#ex2", "keywords": "Solved example 2 — one dimension, k = 2"}, {"title": "Choosing k", "topic": "Ch 11", "url": "topics/11-kmeans.html#choosing-k", "keywords": "Choosing k"}, {"title": "The five challenges of k-means", "topic": "Ch 11", "url": "topics/11-kmeans.html#challenges", "keywords": "The five challenges of k-means"}, {"title": "Implementation", "topic": "Ch 11", "url": "topics/11-kmeans.html#code", "keywords": "Implementation"}, {"title": "Check your understanding", "topic": "Ch 11", "url": "topics/11-kmeans.html#check", "keywords": "Check your understanding"}, {"title": "Clustering by density", "topic": "Ch 12", "url": "topics/12-dbscan.html#idea", "keywords": "Clustering by density"}, {"title": "The definitions", "topic": "Ch 12", "url": "topics/12-dbscan.html#definitions", "keywords": "The definitions"}, {"title": "The algorithm, step by step", "topic": "Ch 12", "url": "topics/12-dbscan.html#algorithm", "keywords": "The algorithm, step by step"}, {"title": "Solved example 1 — eps = 1.5, MinPts = 3", "topic": "Ch 12", "url": "topics/12-dbscan.html#ex1", "keywords": "Solved example 1 — eps = 1.5, MinPts = 3"}, {"title": "Solved example 2 — the same points with eps = 0.9", "topic": "Ch 12", "url": "topics/12-dbscan.html#ex2", "keywords": "Solved example 2 — the same points with eps = 0.9"}, {"title": "Choosing eps and MinPts", "topic": "Ch 12", "url": "topics/12-dbscan.html#params", "keywords": "Choosing eps and MinPts"}, {"title": "Strengths and weaknesses", "topic": "Ch 12", "url": "topics/12-dbscan.html#compare", "keywords": "Strengths and weaknesses"}, {"title": "Implementation", "topic": "Ch 12", "url": "topics/12-dbscan.html#code", "keywords": "Implementation"}, {"title": "Check your understanding", "topic": "Ch 12", "url": "topics/12-dbscan.html#check", "keywords": "Check your understanding"}, {"title": "The problem with a global eps", "topic": "Ch 13", "url": "topics/13-optics.html#why", "keywords": "The problem with a global eps"}, {"title": "The two new quantities", "topic": "Ch 13", "url": "topics/13-optics.html#definitions", "keywords": "The two new quantities"}, {"title": "The algorithm, step by step", "topic": "Ch 13", "url": "topics/13-optics.html#algorithm", "keywords": "The algorithm, step by step"}, {"title": "Solved example 1 — a full ordering, computed by hand", "topic": "Ch 13", "url": "topics/13-optics.html#ex1", "keywords": "Solved example 1 — a full ordering, computed by hand"}, {"title": "Solved example 2 — two clusters of very different density", "topic": "Ch 13", "url": "topics/13-optics.html#ex2", "keywords": "Solved example 2 — two clusters of very different density"}, {"title": "Extracting clusters from the ordering", "topic": "Ch 13", "url": "topics/13-optics.html#extract", "keywords": "Extracting clusters from the ordering"}, {"title": "DBSCAN versus OPTICS", "topic": "Ch 13", "url": "topics/13-optics.html#compare", "keywords": "DBSCAN versus OPTICS"}, {"title": "Implementation", "topic": "Ch 13", "url": "topics/13-optics.html#code", "keywords": "Implementation"}, {"title": "Check your understanding", "topic": "Ch 13", "url": "topics/13-optics.html#check", "keywords": "Check your understanding"}, {"title": "A tree instead of a partition", "topic": "Ch 14", "url": "topics/14-hierarchical.html#idea", "keywords": "A tree instead of a partition"}, {"title": "Linkage — how to measure distance between clusters", "topic": "Ch 14", "url": "topics/14-hierarchical.html#linkage", "keywords": "Linkage — how to measure distance between clusters"}, {"title": "Solved example 1 — single linkage", "topic": "Ch 14", "url": "topics/14-hierarchical.html#ex1", "keywords": "Solved example 1 — single linkage"}, {"title": "Solved example 2 — the same points with complete linkage", "topic": "Ch 14", "url": "topics/14-hierarchical.html#ex2", "keywords": "Solved example 2 — the same points with complete linkage"}, {"title": "Reading a dendrogram", "topic": "Ch 14", "url": "topics/14-hierarchical.html#dendrogram", "keywords": "Reading a dendrogram"}, {"title": "Compared with the other methods", "topic": "Ch 14", "url": "topics/14-hierarchical.html#compare", "keywords": "Compared with the other methods"}, {"title": "Check your understanding", "topic": "Ch 14", "url": "topics/14-hierarchical.html#check", "keywords": "Check your understanding"}];</script>
+<script src="assets/app.js"></script>
+</body>
+</html>
