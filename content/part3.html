@@ -1,0 +1,357 @@
+<!--TOPIC:06-naive-bayes|Naive Bayes|-->
+<h2 id="idea">Classification by probability</h2>
+
+<p>Instead of drawing a boundary through the feature space, naive Bayes asks a direct question: given these feature values, which class is more probable? It answers with Bayes' theorem and one very strong assumption.</p>
+
+\[
+P(C_k \mid x) = \frac{P(x \mid C_k)\,P(C_k)}{P(x)}
+\]
+
+<div class="tablewrap"><table>
+<thead><tr><th>Term</th><th>Name</th><th>Where it comes from</th></tr></thead>
+<tbody>
+<tr><td>\(P(C_k \mid x)\)</td><td>Posterior</td><td>What we want — probability of the class given the features</td></tr>
+<tr><td>\(P(x \mid C_k)\)</td><td>Likelihood</td><td>Estimated from training data, per class</td></tr>
+<tr><td>\(P(C_k)\)</td><td>Prior</td><td>Class frequency in the training data</td></tr>
+<tr><td>\(P(x)\)</td><td>Evidence</td><td>The same for every class, so it cancels when comparing</td></tr>
+</tbody></table></div>
+
+<p>Because the denominator is identical for all classes, classification only needs the numerator:</p>
+
+\[
+\hat{y} = \arg\max_k \; P(C_k)\prod_j P(x_j \mid C_k)
+\]
+
+<h2 id="assumption">The naive assumption</h2>
+
+<div class="box def">
+<span class="box-label">Conditional independence</span>
+<p>The features are assumed independent of each other <em>given the class</em>. This lets the joint likelihood factorise into a product of one-dimensional terms, which is why the model needs so little data and is so fast.</p>
+</div>
+
+<p>The assumption is almost always false — humidity and outlook are not independent in weather data. The remarkable empirical fact is that classification often still works, because the model only needs the correct class to have the highest score, not the scores themselves to be accurate.</p>
+
+<h2 id="worked">Worked example — the Play Tennis dataset</h2>
+
+<div class="box example">
+<span class="box-label">Predict for Outlook = Sunny, Temperature = Cool, Humidity = High, Wind = Strong</span>
+<p>Fourteen training rows: 9 Yes, 5 No. So \(P(\text{Yes}) = 9/14\) and \(P(\text{No}) = 5/14\).</p>
+<p><strong>Likelihoods from the frequency tables</strong> (denominators are class counts, not 14):</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Attribute value</th><th>\(P(\cdot \mid \text{Yes})\)</th><th>\(P(\cdot \mid \text{No})\)</th></tr></thead>
+<tbody>
+<tr><td>Outlook = Sunny</td><td>2/9</td><td>3/5</td></tr>
+<tr><td>Temperature = Cool</td><td>3/9</td><td>1/5</td></tr>
+<tr><td>Humidity = High</td><td>3/9</td><td>4/5</td></tr>
+<tr><td>Wind = Strong</td><td>3/9</td><td>3/5</td></tr>
+</tbody></table></div>
+<p><strong>Yes:</strong> \(\frac{9}{14}\times\frac{2}{9}\times\frac{3}{9}\times\frac{3}{9}\times\frac{3}{9} = 0.00529\)</p>
+<p><strong>No:</strong> \(\frac{5}{14}\times\frac{3}{5}\times\frac{1}{5}\times\frac{4}{5}\times\frac{3}{5} = 0.03429\)</p>
+<p>No is about 6.5 times larger, so predict <strong>No</strong>.</p>
+<p>Normalising the two scores gives \(P(\text{Yes}) = 0.00529/0.03958 = 0.134\) and \(P(\text{No}) = 0.866\) — a genuine probability, not just a ranking.</p>
+</div>
+
+<h2 id="zero">The zero-frequency problem</h2>
+
+<p>If a feature value never appears with a class in training, its likelihood is zero, and the product collapses to zero regardless of everything else. One unseen combination destroys the prediction.</p>
+
+<p><strong>Laplace smoothing</strong> fixes it by adding a small count to every cell:</p>
+
+\[
+P(x_j \mid C_k) = \frac{\text{count}(x_j, C_k) + \alpha}{\text{count}(C_k) + \alpha \cdot |V_j|}
+\]
+
+<p>where \(|V_j|\) is the number of distinct values of feature \(j\). With \(\alpha = 1\) no probability is ever exactly zero.</p>
+
+<h2 id="continuous">Continuous features</h2>
+
+<p>The frequency-table approach only works for categorical features. For a continuous feature, assume it is normally distributed within each class and use the density:</p>
+
+\[
+P(x \mid C_k) = \frac{1}{\sqrt{2\pi\sigma_k^2}}\exp\left(-\frac{(x-\mu_k)^2}{2\sigma_k^2}\right)
+\]
+
+<p>Estimate \(\mu_k\) and \(\sigma_k\) from the training rows of class \(k\). This is Gaussian naive Bayes.</p>
+
+<h2 id="code">Implementation</h2>
+
+<div class="codeblock">
+  <div class="codeblock-header"><span class="lang">Python</span><span class="file">naive_bayes.py</span><button class="copy-btn">Copy</button></div>
+<pre><code class="language-python">from collections import Counter, defaultdict
+
+
+def train(rows, labels):
+    """rows: list of dicts of feature -> value. Returns priors and likelihoods."""
+    priors = Counter(labels)
+    counts = defaultdict(Counter)
+    totals = Counter()
+    values = defaultdict(set)
+
+    for row, label in zip(rows, labels):
+        totals[label] += 1
+        for f, v in row.items():
+            counts[(label, f)][v] += 1
+            values[f].add(v)
+
+    return priors, counts, totals, values
+
+
+def predict(row, model, alpha=1.0):
+    """Returns {class: score}. alpha=1 gives Laplace smoothing."""
+    priors, counts, totals, values = model
+    scores = {}
+    n = sum(priors.values())
+
+    for label in priors:
+        score = priors[label] / n                    # prior
+        for f, v in row.items():
+            num = counts[(label, f)][v] + alpha
+            den = totals[label] + alpha * len(values[f])
+            score *= num / den                       # likelihood
+        scores[label] = score
+    return scores
+
+
+if __name__ == "__main__":
+    rows = [
+        {"outlook": "Sunny", "temp": "Hot",   "humidity": "High",   "wind": "Weak"},
+        {"outlook": "Sunny", "temp": "Hot",   "humidity": "High",   "wind": "Strong"},
+        {"outlook": "Overcast", "temp": "Hot", "humidity": "High",  "wind": "Weak"},
+        {"outlook": "Rain",  "temp": "Mild",  "humidity": "High",   "wind": "Weak"},
+        {"outlook": "Rain",  "temp": "Cool",  "humidity": "Normal", "wind": "Weak"},
+        {"outlook": "Rain",  "temp": "Cool",  "humidity": "Normal", "wind": "Strong"},
+        {"outlook": "Overcast", "temp": "Cool", "humidity": "Normal", "wind": "Strong"},
+        {"outlook": "Sunny", "temp": "Mild",  "humidity": "High",   "wind": "Weak"},
+        {"outlook": "Sunny", "temp": "Cool",  "humidity": "Normal", "wind": "Weak"},
+        {"outlook": "Rain",  "temp": "Mild",  "humidity": "Normal", "wind": "Weak"},
+        {"outlook": "Sunny", "temp": "Mild",  "humidity": "Normal", "wind": "Strong"},
+        {"outlook": "Overcast", "temp": "Mild", "humidity": "High", "wind": "Strong"},
+        {"outlook": "Overcast", "temp": "Hot", "humidity": "Normal", "wind": "Weak"},
+        {"outlook": "Rain",  "temp": "Mild",  "humidity": "High",   "wind": "Strong"},
+    ]
+    labels = ["No","No","Yes","Yes","Yes","No","Yes","No","Yes","Yes","Yes","Yes","Yes","No"]
+
+    model = train(rows, labels)
+    query = {"outlook": "Sunny", "temp": "Cool", "humidity": "High", "wind": "Strong"}
+    print(predict(query, model))     # {'No': ..., 'Yes': ...}</code></pre>
+</div>
+
+<div class="box warn">
+<span class="box-label">Exam trap</span>
+<p>The likelihood denominators are the <strong>class counts</strong> (9 and 5), not the dataset size (14). Writing \(2/14\) instead of \(2/9\) for "Sunny given Yes" is the single most common error in this question, and it is easy to avoid by asking "out of how many Yes days?"</p>
+</div>
+
+<h2 id="check">Check your understanding</h2>
+
+<div class="quiz">
+  <div class="qtext">Why is Laplace smoothing needed?</div>
+  <div class="opts">
+    <button class="opt">To make the model train faster</button>
+    <button class="opt" data-correct>A single unseen feature value would otherwise make the whole product zero</button>
+    <button class="opt">To satisfy the independence assumption</button>
+    <button class="opt">To handle continuous features</button>
+  </div>
+  <div class="fb">Because the likelihoods are multiplied, one factor of zero annihilates the score no matter how strong the rest of the evidence. Adding a small count to every cell guarantees no factor is ever exactly zero.</div>
+</div>
+
+<!--TOPIC:07-decision-trees|Decision Trees|-->
+<h2 id="idea">Splitting the feature space</h2>
+
+<p>A decision tree asks a sequence of yes/no questions about the features, and each leaf carries a predicted class. Learning means choosing which question to ask at each node — and "best" is defined by how much the split reduces <strong>impurity</strong>.</p>
+
+<h2 id="entropy">Entropy</h2>
+
+\[
+H(S) = -\sum_{i} p_i \log_2 p_i
+\]
+
+<p>Entropy measures how mixed a set of labels is. For two classes with proportion \(p\):</p>
+
+<ul>
+<li>All one class (\(p = 1\) or \(0\)): \(H = 0\). Pure, no uncertainty.</li>
+<li>50/50: \(H = 1\). Maximum uncertainty for two classes.</li>
+</ul>
+
+<div class="viz" id="viz-entropy">
+  <div class="viz-head">
+    <h3>Entropy explorer</h3>
+    <div class="viz-controls">
+      <label style="font-size:12.5px;color:var(--ink-3)">positives</label>
+      <input type="number" data-e="pos" value="9" min="0" max="40" style="width:62px">
+      <label style="font-size:12.5px;color:var(--ink-3)">negatives</label>
+      <input type="number" data-e="neg" value="5" min="0" max="40" style="width:62px">
+    </div>
+  </div>
+  <div class="viz-stage"></div>
+  <div class="viz-log"></div>
+</div>
+
+<h2 id="ig">Information gain</h2>
+
+\[
+\text{IG}(S, A) = H(S) - \sum_{v \in \text{values}(A)} \frac{|S_v|}{|S|} H(S_v)
+\]
+
+<p>In words: the entropy before the split, minus the weighted average entropy after it. That difference is the information the question gave you. ID3 picks the attribute with the largest gain, then recurses on each branch.</p>
+
+<h2 id="worked">Worked example — the Tennis root node</h2>
+
+<div class="box example">
+<span class="box-label">Choosing the first split</span>
+<p>14 rows, 9 Yes and 5 No.</p>
+<p><strong>Root entropy:</strong> \(H(S) = -\frac{9}{14}\log_2\frac{9}{14} - \frac{5}{14}\log_2\frac{5}{14} = 0.9403\)</p>
+<p><strong>Split on Outlook:</strong> Sunny (5 rows: 2 Yes, 3 No), Overcast (4: 4 Yes, 0 No), Rain (5: 3 Yes, 2 No).</p>
+<p>\(H(\text{Sunny}) = 0.9710\), \(H(\text{Overcast}) = 0\), \(H(\text{Rain}) = 0.9710\)</p>
+<p>Weighted: \(\frac{5}{14}(0.9710) + \frac{4}{14}(0) + \frac{5}{14}(0.9710) = 0.6936\)</p>
+<p>\(\text{IG}(\text{Outlook}) = 0.9403 - 0.6936 = \mathbf{0.2467}\)</p>
+<p><strong>All four attributes:</strong></p>
+<div class="tablewrap"><table>
+<thead><tr><th>Attribute</th><th>Information gain</th></tr></thead>
+<tbody>
+<tr><td>Outlook</td><td>0.247</td></tr>
+<tr><td>Humidity</td><td>0.152</td></tr>
+<tr><td>Wind</td><td>0.048</td></tr>
+<tr><td>Temperature</td><td>0.029</td></tr>
+</tbody></table></div>
+<p>Outlook wins, so it becomes the root. Recurse on each branch: the Overcast branch is pure (all Yes), so it becomes a leaf immediately.</p>
+</div>
+
+<h2 id="gini">Gini impurity</h2>
+
+\[
+\text{Gini}(S) = 1 - \sum_i p_i^2
+\]
+
+<p>An alternative impurity measure used by CART. It is cheaper to compute — no logarithms — and in practice picks almost the same splits.</p>
+
+<div class="box example">
+<span class="box-label">The same split scored with Gini</span>
+<p>Root: \(1 - (9/14)^2 - (5/14)^2 = 0.4592\)</p>
+<p>Branches: Sunny \(1 - (2/5)^2 - (3/5)^2 = 0.48\); Overcast \(1 - 1^2 - 0 = 0\); Rain \(0.48\).</p>
+<p>Weighted: \(\frac{5}{14}(0.48) + \frac{4}{14}(0) + \frac{5}{14}(0.48) = 0.3429\)</p>
+<p>Gini gain \(= 0.4592 - 0.3429 = \mathbf{0.1163}\)</p>
+<p>Different number, same ranking: Outlook is still the best split. Entropy and Gini disagree only rarely, and when they do the effect on accuracy is small.</p>
+</div>
+
+<h2 id="pruning">Pruning</h2>
+
+<p>An unconstrained tree grows until every leaf is pure, which memorises the training data. Two remedies:</p>
+
+<ul>
+<li><strong>Pre-pruning</strong> — stop early: limit depth, require a minimum number of samples per leaf, or refuse splits whose gain is below a threshold.</li>
+<li><strong>Post-pruning</strong> — grow the full tree, then remove branches that do not improve validation accuracy. More expensive, usually better.</li>
+</ul>
+
+<div class="box warn">
+<span class="box-label">Why accuracy alone picks bad trees</span>
+<p>Information gain is biased toward attributes with many distinct values. An ID column would have a gain of 1.0 — it splits every row into its own pure leaf — and would be chosen as the root every time, while being completely useless. That is why real implementations also require a minimum samples-per-leaf.</p>
+</div>
+
+<h2 id="check">Check your understanding</h2>
+
+<div class="quiz">
+  <div class="qtext">A node contains 10 positives and 10 negatives. What is its entropy?</div>
+  <div class="opts">
+    <button class="opt">0</button>
+    <button class="opt" data-correct>1 bit</button>
+    <button class="opt">0.5 bits</button>
+    <button class="opt">10 bits</button>
+  </div>
+  <div class="fb">With p = q = 0.5: H = −(0.5 log₂ 0.5 + 0.5 log₂ 0.5) = −(0.5(−1) + 0.5(−1)) = 1 bit. For two classes, entropy is maximised at a 50/50 split and is 0 when the node is pure.</div>
+</div>
+
+<!--TOPIC:08-knn|K-Nearest Neighbours|-->
+<h2 id="idea">The laziest classifier</h2>
+
+<p>KNN does no training at all. It stores the entire dataset and, at prediction time, finds the \(k\) closest training points and takes a vote. That is the whole algorithm.</p>
+
+<div class="box def">
+<span class="box-label">Algorithm</span>
+<ol>
+<li>Store all training points and their labels.</li>
+<li>For a new point, compute the distance to every stored point.</li>
+<li>Take the \(k\) smallest distances.</li>
+<li><strong>Classification:</strong> majority vote among their labels. <strong>Regression:</strong> average their values.</li>
+</ol>
+</div>
+
+<p>This is called a <strong>lazy learner</strong>: it defers all work to prediction time. Training is \(O(1)\), but each prediction costs \(O(n \cdot d)\) for \(n\) points in \(d\) dimensions.</p>
+
+<h2 id="distance">The distance metric</h2>
+
+\[
+d(a,b) = \sqrt{\sum_{j=1}^{d}(a_j - b_j)^2}
+\]
+
+<p>Euclidean distance. Because it sums squared differences across features, <strong>features must be scaled first</strong> — otherwise a feature measured in thousands dominates one measured in single digits, and the distance is effectively computed on that feature alone.</p>
+
+<h2 id="worked">Worked example</h2>
+
+<div class="box example">
+<span class="box-label">Classifying a new point with k = 3</span>
+<p>Training points: \(A(1,1)\) class A, \(B(2,2)\) class A, \(C(3,1)\) class B, \(D(5,5)\) class B. New point \(P(3,2)\).</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Point</th><th>Distance from P(3,2)</th><th>Class</th></tr></thead>
+<tbody>
+<tr><td>A(1,1)</td><td>\(\sqrt{4+1} = 2.236\)</td><td>A</td></tr>
+<tr><td>B(2,2)</td><td>\(\sqrt{1+0} = 1.000\)</td><td>A</td></tr>
+<tr><td>C(3,1)</td><td>\(\sqrt{0+1} = 1.000\)</td><td>B</td></tr>
+<tr><td>D(5,5)</td><td>\(\sqrt{4+9} = 3.606\)</td><td>B</td></tr>
+</tbody></table></div>
+<p>The three nearest are B (1.000, class A), C (1.000, class B) and A (2.236, class A). Vote: <strong>A gets 2, B gets 1</strong>, so predict class A.</p>
+<p>Note the tie between B and C. Breaking ties by distance is arbitrary here; some implementations prefer odd \(k\) precisely to avoid vote ties.</p>
+</div>
+
+<h2 id="k">Choosing k</h2>
+
+<div class="tablewrap"><table>
+<thead><tr><th>k</th><th>Effect</th></tr></thead>
+<tbody>
+<tr><td>k = 1</td><td>Decision boundary hugs every point — zero training error, high variance, very sensitive to noise</td></tr>
+<tr><td>Large k</td><td>Boundary smooths out; eventually everything is predicted as the majority class — high bias</td></tr>
+<tr><td>Rule of thumb</td><td>Start at \(\sqrt{n}\) and tune on the validation set; prefer odd values for two-class problems</td></tr>
+</tbody></table></div>
+
+<div class="box warn">
+<span class="box-label">The curse of dimensionality</span>
+<p>As the number of features grows, points that seemed close become far apart — in high dimensions the ratio of nearest to farthest neighbour distance approaches 1, so "nearest" stops meaning anything. KNN degrades badly beyond roughly 10–20 features unless you reduce dimensionality first. This is the standard exam criticism of KNN.</p>
+</div>
+
+<h2 id="code">Implementation</h2>
+
+<div class="codeblock">
+  <div class="codeblock-header"><span class="lang">Python</span><span class="file">knn.py</span><button class="copy-btn">Copy</button></div>
+<pre><code class="language-python">from collections import Counter
+from math import sqrt
+
+
+def knn_predict(train_X, train_y, query, k=3):
+    """Majority vote among the k nearest training points."""
+    distances = []
+    for x, label in zip(train_X, train_y):
+        d = sqrt(sum((a - b) ** 2 for a, b in zip(x, query)))
+        distances.append((d, label))
+
+    distances.sort(key=lambda t: t[0])
+    nearest = [label for _, label in distances[:k]]
+    return Counter(nearest).most_common(1)[0][0]
+
+
+if __name__ == "__main__":
+    X = [(1, 1), (2, 2), (3, 1), (5, 5)]
+    y = ["A", "A", "B", "B"]
+    print(knn_predict(X, y, (3, 2), k=3))   # A</code></pre>
+</div>
+
+<h2 id="check">Check your understanding</h2>
+
+<div class="quiz">
+  <div class="qtext">What happens to KNN as k increases toward n?</div>
+  <div class="opts">
+    <button class="opt">It overfits more</button>
+    <button class="opt" data-correct>It becomes biased toward the majority class and eventually predicts that for everything</button>
+    <button class="opt">It becomes faster</button>
+    <button class="opt">Nothing changes</button>
+  </div>
+  <div class="fb">With k = n every query's neighbourhood is the entire training set, so the vote is the global class distribution and every prediction is the majority class. That is maximum bias and minimum variance — the opposite failure from k = 1.</div>
+</div>
