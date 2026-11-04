@@ -1,0 +1,233 @@
+<!--TOPIC:11-kmeans|k-Means Clustering|-->
+<h2 id="problem">The problem k-means solves</h2>
+
+<p>You have data with no labels and you believe it falls into groups. k-means answers: <em>given k, what is the best way to partition these points into k groups?</em></p>
+
+<div class="box def">
+<span class="box-label">Formal statement</span>
+<p>Given \(n\) points \(x_1,\ldots,x_n\) in \(\mathbb{R}^d\) and an integer \(k\), find \(k\) centroids \(\mu_1,\ldots,\mu_k\) and an assignment of each point to one centroid, minimising the <strong>within-cluster sum of squares</strong>:</p>
+\[
+\text{SSE} = \sum_{i=1}^{k}\ \sum_{x \in C_i} \|x - \mu_i\|^2
+\]
+<p>where \(C_i\) is the set of points assigned to centroid \(i\), and \(\mu_i = \frac{1}{|C_i|}\sum_{x\in C_i} x\) is their mean.</p>
+</div>
+
+<p>SSE is also called <em>inertia</em> in scikit-learn. It is the sum of squared distances from each point to its own centroid, so smaller is tighter.</p>
+
+<div class="box why">
+<span class="box-label">Why this objective, and why it is hard</span>
+<p>Finding the globally optimal partition is NP-hard — the number of ways to split \(n\) points into \(k\) groups is a Stirling number, astronomically large. k-means does not solve that problem. It finds a <strong>local</strong> optimum by alternating two easy steps, which is fast and usually good enough.</p>
+</div>
+
+<h2 id="algorithm">The algorithm, step by step</h2>
+
+<ol>
+<li><strong>Choose k</strong> and <strong>initialise k centroids</strong>. Randomly, or by k-means++ (pick each new centroid with probability proportional to its squared distance from the nearest existing centroid — this is what scikit-learn does by default and it reduces bad local optima).</li>
+<li><strong>Assignment step.</strong> For every point, compute the distance to every centroid and assign the point to the nearest one.</li>
+<li><strong>Update step.</strong> Recompute each centroid as the mean of the points now assigned to it.</li>
+<li><strong>Repeat</strong> steps 2 and 3 until the assignments stop changing (or a maximum iteration count is reached).</li>
+<li><strong>Report</strong> the final centroids and assignments, and the SSE.</li>
+</ol>
+
+<div class="box why">
+<span class="box-label">Why it must terminate</span>
+<p>Each step can only decrease or hold the SSE: assigning each point to its nearest centroid is the best assignment given the centroids, and replacing a centroid by the mean of its members is the best centroid given the assignment. Since there are finitely many possible assignments, the procedure cannot cycle forever — it reaches a fixed point in a finite number of iterations. It may reach a <em>local</em> optimum, not the global one.</p>
+</div>
+
+<div class="viz" id="viz-kmeans">
+  <div class="viz-head">
+    <h3>k-means stepper</h3>
+    <div class="viz-controls">
+      <select data-km="k" aria-label="Number of clusters">
+        <option value="2" selected>k = 2</option>
+        <option value="3">k = 3</option>
+      </select>
+      <button data-km="step">One iteration</button>
+      <button data-km="reset">Reset</button>
+    </div>
+  </div>
+  <div class="viz-stage"></div>
+  <div class="viz-log"></div>
+</div>
+
+<h2 id="ex1">Solved example 1 — two dimensions, k = 2</h2>
+
+<div class="box example">
+<span class="box-label">Points: (1,1), (2,1), (4,3), (5,4). Initial centroids: c₁ = (1,1), c₂ = (5,4)</span>
+
+<p><strong>Iteration 1 — assignment.</strong> Compute Euclidean distance from each point to each centroid.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Point</th><th>d to c₁ (1,1)</th><th>d to c₂ (5,4)</th><th>Assigned</th></tr></thead>
+<tbody>
+<tr><td>(1,1)</td><td>0.00</td><td>5.00</td><td>C₁</td></tr>
+<tr><td>(2,1)</td><td>1.00</td><td>4.24</td><td>C₁</td></tr>
+<tr><td>(4,3)</td><td>3.61</td><td>1.41</td><td>C₂</td></tr>
+<tr><td>(5,4)</td><td>5.00</td><td>0.00</td><td>C₂</td></tr>
+</tbody></table></div>
+<p><strong>Iteration 1 — update.</strong> \(c_1 = \left(\frac{1+2}{2}, \frac{1+1}{2}\right) = (1.5, 1)\) and \(c_2 = \left(\frac{4+5}{2}, \frac{3+4}{2}\right) = (4.5, 3.5)\).</p>
+
+<p><strong>Iteration 2 — assignment.</strong></p>
+<div class="tablewrap"><table>
+<thead><tr><th>Point</th><th>d to c₁ (1.5,1)</th><th>d to c₂ (4.5,3.5)</th><th>Assigned</th></tr></thead>
+<tbody>
+<tr><td>(1,1)</td><td>0.50</td><td>4.30</td><td>C₁</td></tr>
+<tr><td>(2,1)</td><td>0.50</td><td>3.54</td><td>C₁</td></tr>
+<tr><td>(4,3)</td><td>3.20</td><td>0.71</td><td>C₂</td></tr>
+<tr><td>(5,4)</td><td>3.81</td><td>0.71</td><td>C₂</td></tr>
+</tbody></table></div>
+<p>Assignments are unchanged, so the algorithm has <strong>converged</strong>.</p>
+
+<p><strong>Final result.</strong> Clusters \(\{(1,1),(2,1)\}\) and \(\{(4,3),(5,4)\}\).</p>
+<p>\(\text{SSE} = (0.5^2 + 0.5^2) + (0.5^2 + 0.5^2) = 0.5 + 1.0 = \mathbf{1.5}\)</p>
+</div>
+
+<h2 id="ex2">Solved example 2 — one dimension, k = 2</h2>
+
+<div class="box example">
+<span class="box-label">Points: 2, 4, 10, 12, 3, 20, 30, 11, 25. Initial centroids: c₁ = 2, c₂ = 4</span>
+<p>Nine points, one feature. Distance is just absolute difference.</p>
+
+<p><strong>Iteration 1.</strong> Assign each point to the nearer centroid:</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Point</th><th>|x − 2|</th><th>|x − 4|</th><th>Assigned</th></tr></thead>
+<tbody>
+<tr><td>2</td><td>0</td><td>2</td><td>C₁</td></tr>
+<tr><td>4</td><td>2</td><td>0</td><td>C₂</td></tr>
+<tr><td>10</td><td>8</td><td>6</td><td>C₂</td></tr>
+<tr><td>12</td><td>10</td><td>8</td><td>C₂</td></tr>
+<tr><td>3</td><td>1</td><td>1</td><td>C₁ (tie → first)</td></tr>
+<tr><td>20</td><td>18</td><td>16</td><td>C₂</td></tr>
+<tr><td>30</td><td>28</td><td>26</td><td>C₂</td></tr>
+<tr><td>11</td><td>9</td><td>7</td><td>C₂</td></tr>
+<tr><td>25</td><td>23</td><td>21</td><td>C₂</td></tr>
+</tbody></table></div>
+<p>Update: \(c_1 = \frac{2+3}{2} = 2.5\), and \(c_2 = \frac{4+10+12+20+30+11+25}{7} = \frac{112}{7} = 16\).</p>
+
+<p><strong>Iteration 2.</strong> With centroids at 2.5 and 16, point 4 is now closer to 2.5 (distance 1.5) than to 16 (12), so it switches to C₁. Point 10 stays with C₂ (7.5 vs 6).</p>
+<p>\(c_1 = \frac{2+3+4}{3} = 3\), and \(c_2 = \frac{10+12+20+30+11+25}{6} = \frac{108}{6} = 18\).</p>
+
+<p><strong>Iteration 3.</strong> Centroid distance from 10: \(|10-3| = 7\) vs \(|10-18| = 8\) — so <strong>10 switches to C₁</strong>. Point 11: \(|11-3| = 8\) vs \(|11-18| = 7\) — stays with C₂.</p>
+<p>\(c_1 = \frac{2+3+4+10}{4} = 4.75\), and \(c_2 = \frac{11+12+20+25+30}{5} = \frac{98}{5} = 19.6\).</p>
+
+<p><strong>Iteration 4.</strong> Point 12: \(|12-4.75| = 7.25\) vs \(|12-19.6| = 7.6\) — so <strong>12 switches to C₁</strong>.</p>
+<p>\(c_1 = \frac{2+3+4+10+11+12}{6} = 7\), and \(c_2 = \frac{20+25+30}{3} = 25\).</p>
+
+<p><strong>Iteration 5.</strong> Check every point against 7 and 25. Nothing changes: 12 is 5 from 7 and 13 from 25; 20 is 13 from 7 and 5 from 25. <strong>Converged.</strong></p>
+
+<p><strong>Final result.</strong> Clusters \(\{2,3,4,10,11,12\}\) and \(\{20,25,30\}\), centroids 7 and 25.</p>
+<p>\(\text{SSE} = (5^2+4^2+3^2+3^2+4^2+5^2) + (5^2+0+5^2) = 100 + 50 = \mathbf{150}\)</p>
+</div>
+
+<div class="box warn">
+<span class="box-label">What that trace shows</span>
+<p>Notice how long convergence took — five iterations for nine points — and that points 4, 10 and 12 each changed cluster <em>after</em> the first iteration. A single pass is never enough. It also shows the sensitivity to initialisation: starting at 2 and 4 put both centroids inside the same natural group, and the algorithm had to work its way out.</p>
+</div>
+
+<h2 id="choosing-k">Choosing k</h2>
+
+<p>k-means cannot choose \(k\) for you; it must be given. Two standard approaches:</p>
+
+<div class="tablewrap"><table>
+<thead><tr><th>Method</th><th>How</th><th>Limitation</th></tr></thead>
+<tbody>
+<tr><td><strong>Elbow method</strong></td><td>Plot SSE against k; look for the point where the decrease flattens</td><td>The elbow is often ambiguous or absent</td></tr>
+<tr><td><strong>Silhouette score</strong></td><td>For each point, compare its mean distance to its own cluster against the nearest other cluster; average over all points</td><td>Costlier to compute; still a heuristic</td></tr>
+<tr><td><strong>Domain knowledge</strong></td><td>You know there are 3 customer tiers</td><td>Requires the knowledge</td></tr>
+</tbody></table></div>
+
+<p>Silhouette for one point is \(s = \frac{b-a}{\max(a,b)}\) where \(a\) is the mean distance to its own cluster and \(b\) the mean distance to the nearest other cluster. It ranges from −1 (wrong cluster) through 0 (on the boundary) to +1 (well inside).</p>
+
+<h2 id="challenges">The five challenges of k-means</h2>
+
+<ol>
+<li><strong>k must be chosen in advance.</strong> The algorithm has no notion of how many clusters exist.</li>
+<li><strong>Sensitive to initialisation.</strong> Different starting centroids can converge to different local optima with different SSE. k-means++ and multiple restarts mitigate this, not eliminate it.</li>
+<li><strong>Assumes roughly spherical, equal-sized clusters.</strong> Because it minimises squared distance to a centre, it cannot represent elongated or ring-shaped clusters — it will cut a ring in half.</li>
+<li><strong>Sensitive to outliers.</strong> A centroid is a mean, and a mean is dragged by extreme values. One far-away point can pull an entire cluster.</li>
+<li><strong>Every point must be assigned.</strong> There is no notion of noise — a point that belongs to no cluster is forced into the nearest one anyway.</li>
+</ol>
+
+<div class="box warn">
+<span class="box-label">Exam trap</span>
+<p>k-means <strong>always terminates</strong> but not always at the global optimum, and it <strong>always assigns every point</strong> — there are no outliers. Both are frequent true/false questions. If a dataset has genuinely unassignable points, DBSCAN (chapter 12) is the answer, and that is exactly the comparison to make.</p>
+</div>
+
+<h2 id="code">Implementation</h2>
+
+<div class="codeblock">
+  <div class="codeblock-header"><span class="lang">Python</span><span class="file">kmeans.py</span><button class="copy-btn">Copy</button></div>
+<pre><code class="language-python">from math import dist
+
+
+def kmeans(points, k, centroids, max_iter=100):
+    """Lloyd's algorithm. points and centroids are tuples."""
+    for iteration in range(max_iter):
+        # 1. assignment step
+        clusters = [[] for _ in range(k)]
+        for p in points:
+            best = min(range(k), key=lambda i: dist(p, centroids[i]))
+            clusters[best].append(p)
+
+        # 2. update step
+        new_centroids = []
+        for i, group in enumerate(clusters):
+            if not group:
+                new_centroids.append(centroids[i])       # keep an empty cluster's centre
+                continue
+            dims = len(group[0])
+            new_centroids.append(tuple(sum(p[d] for p in group) / len(group) for d in range(dims)))
+
+        if new_centroids == centroids:                   # converged
+            return clusters, centroids, iteration
+        centroids = new_centroids
+
+    return clusters, centroids, max_iter
+
+
+def sse(clusters, centroids):
+    return sum(dist(p, centroids[i]) ** 2 for i, g in enumerate(clusters) for p in g)
+
+
+if __name__ == "__main__":
+    pts = [(1, 1), (2, 1), (4, 3), (5, 4)]
+    groups, cents, it = kmeans(pts, 2, [(1, 1), (5, 4)])
+    print("iterations:", it)          # 1 (converged after the second assignment)
+    print("centroids :", cents)       # [(1.5, 1.0), (4.5, 3.5)]
+    print("SSE       :", sse(groups, cents))   # 1.5</code></pre>
+</div>
+
+<div class="codeblock">
+  <div class="codeblock-header"><span class="lang">Python</span><span class="file">with scikit-learn</span><button class="copy-btn">Copy</button></div>
+<pre><code class="language-python">from sklearn.cluster import KMeans
+
+X = [[1, 1], [2, 1], [4, 3], [5, 4]]
+km = KMeans(n_clusters=2, init="k-means++", n_init=10, random_state=0).fit(X)
+
+print(km.cluster_centers_)   # [[4.5 3.5] [1.5 1. ]]
+print(km.labels_)            # cluster index per point
+print(km.inertia_)           # 1.5 — this is SSE</code></pre>
+</div>
+
+<h2 id="check">Check your understanding</h2>
+
+<div class="quiz">
+  <div class="qtext">In the second solved example, why did point 4 move from cluster 2 to cluster 1 in iteration 2?</div>
+  <div class="opts">
+    <button class="opt">Because the assignment step is random</button>
+    <button class="opt" data-correct>Because the centroids moved to 2.5 and 16, and 4 is nearer 2.5</button>
+    <button class="opt">Because point 4 is an outlier</button>
+    <button class="opt">Because k changed</button>
+  </div>
+  <div class="fb">After iteration 1 the centroids are no longer the initial guesses — they are the means of their groups, 2.5 and 16. Distance from 4 to 2.5 is 1.5, to 16 is 12, so 4 now belongs to cluster 1. This is why a single pass is never sufficient: assignments depend on centroids, and centroids depend on assignments.</div>
+</div>
+
+<div class="quiz">
+  <div class="qtext">Which dataset would k-means handle badly?</div>
+  <div class="opts">
+    <button class="opt">Three well-separated circular blobs</button>
+    <button class="opt" data-correct>Two concentric rings, one inside the other</button>
+    <button class="opt">Points on a straight line with three gaps</button>
+    <button class="opt">Four clusters of different sizes but spherical shape</button>
+  </div>
+  <div class="fb">k-means minimises squared distance to a centroid, so it can only produce convex, roughly spherical regions. Two concentric rings would be cut into left and right halves rather than inner and outer — the correct grouping is not linearly separable by distance to a centre. DBSCAN handles this correctly because it reasons about local density rather than global distance.</div>
+</div>
