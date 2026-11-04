@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>13 · OPTICS · ML Notes</title>
+<meta name="description" content="Ordering points by reachability so clusters of different densities all show up.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,400&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']] },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+  };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css">
+</head>
+<body data-page="topic-13-optics">
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../index.html">ML<span>.</span>Notes</a>
+    <nav class="topnav">
+      <a href="../index.html">Home</a>
+      <a href="../topics/01-framework.html">Chapters</a>
+      <a href="../visualizers.html">Visualizers</a>
+      <a href="../practice.html">Practice</a>
+      <a href="../glossary.html">Glossary</a>
+    </nav>
+    <div class="searchbox">
+      <input id="search-input" type="search" placeholder="Search topics…  ( / )" autocomplete="off" aria-label="Search the textbook">
+      <div class="searchresults" id="search-results"></div>
+    </div>
+  </div>
+</header>
+<div class="shell">
+<nav class="sidebar" aria-label="Chapter navigation">
+<div class="side-group">Foundations</div>
+<a href="../topics/01-framework.html" data-topic-id="topic-01-framework">01 · The Machine-Learning Framework</a>
+<div class="side-group">Supervised Learning — Regression</div>
+<a href="../topics/02-linear-regression.html" data-topic-id="topic-02-linear-regression">02 · Linear Regression and Gradient Descent</a>
+<a href="../topics/03-regression-metrics.html" data-topic-id="topic-03-regression-metrics">03 · Regression Metrics</a>
+<a href="../topics/04-bias-variance.html" data-topic-id="topic-04-bias-variance">04 · Bias, Variance and Regularisation</a>
+<div class="side-group">Supervised Learning — Classification</div>
+<a href="../topics/05-logistic-regression.html" data-topic-id="topic-05-logistic-regression">05 · Logistic Regression</a>
+<a href="../topics/06-naive-bayes.html" data-topic-id="topic-06-naive-bayes">06 · Naive Bayes</a>
+<a href="../topics/07-decision-trees.html" data-topic-id="topic-07-decision-trees">07 · Decision Trees</a>
+<a href="../topics/08-knn.html" data-topic-id="topic-08-knn">08 · K-Nearest Neighbours</a>
+<a href="../topics/09-classification-metrics.html" data-topic-id="topic-09-classification-metrics">09 · Classification Metrics</a>
+<a href="../topics/10-svm.html" data-topic-id="topic-10-svm">10 · Support Vector Machines</a>
+<div class="side-group">Unsupervised Learning — Clustering</div>
+<a href="../topics/11-kmeans.html" data-topic-id="topic-11-kmeans">11 · k-Means Clustering</a>
+<a href="../topics/12-dbscan.html" data-topic-id="topic-12-dbscan">12 · DBSCAN</a>
+<a href="../topics/13-optics.html" data-topic-id="topic-13-optics" class="active">13 · OPTICS</a>
+<a href="../topics/14-hierarchical.html" data-topic-id="topic-14-hierarchical">14 · Hierarchical Clustering</a>
+<div class="side-group">Tools</div>
+<a href="../visualizers.html">Interactive Visualizers</a>
+<a href="../practice.html">Practice and Examination Questions</a>
+<a href="../glossary.html">Glossary</a>
+</nav>
+<main>
+<div class="kicker">Chapter 13</div>
+<h1>OPTICS</h1>
+<p class="lede">Ordering points by reachability so clusters of different densities all show up.</p>
+<label class="chapter-check"><input type="checkbox" data-complete="topic-13-optics" aria-label="Mark this chapter complete"><span class="cc-text">Mark this chapter complete</span></label>
+<div class="box note" style="background:var(--amber-soft);border:1px solid rgba(161,98,7,.24);border-radius:6px;padding:12px 16px;margin:0 0 18px">
+<span class="box-label" style="font-family:var(--font-mono);font-size:9px;letter-spacing:1.8px;text-transform:uppercase;color:var(--amber);font-weight:700;margin-bottom:5px;display:block">Self-study topic</span>
+<p style="margin:0">Your notes mark OPTICS as "study on our own". This chapter is built from the original Ankerst et al. formulation and the treatment in Han and Kamber.</p>
+</div>
+
+<h2 id="why">The problem with a global eps</h2>
+
+<p>Chapter 12 ended on the limitation: DBSCAN uses one ε for the whole dataset, so it cannot handle a dataset containing both a tight cluster and a loose one. OPTICS keeps DBSCAN's density definitions but removes the requirement to commit to ε. Instead of producing clusters directly, it produces an <strong>ordering</strong> of the points together with a <strong>reachability distance</strong> for each — and clusters are then read off the resulting plot, at whatever density you choose.</p>
+
+<h2 id="definitions">The two new quantities</h2>
+
+<div class="box def">
+<span class="box-label">Definitions</span>
+<p><strong>Core distance</strong> of a point \(p\) — the distance to its MinPts-th nearest neighbour (counting \(p\) itself). If \(p\) has fewer than MinPts neighbours within ε, its core distance is <em>undefined</em> and \(p\) is not a core point.</p>
+<p><strong>Reachability distance</strong> from \(o\) to \(p\):</p>
+\[
+\text{rd}(p, o) = \begin{cases} \text{undefined} & \text{if } o \text{ is not core} \\ \max\bigl(\text{core-dist}(o),\ d(o,p)\bigr) & \text{otherwise} \end{cases}
+\]
+</div>
+
+<p>The <code>max</code> is the clever part. If \(p\) is very close to a core point \(o\), the reachability distance is still at least \(o\)'s core distance — so a dense region produces uniformly low reachability values, and a sparse region produces high ones, regardless of the individual pairwise distances.</p>
+
+<h2 id="algorithm">The algorithm, step by step</h2>
+
+<ol>
+<li>Set ε (an upper bound, usually generous) and MinPts.</li>
+<li>For every point, compute its <strong>core distance</strong>.</li>
+<li>Maintain a priority queue of unprocessed points keyed by reachability distance.</li>
+<li>Pick any unprocessed point as the start of a new ordering. Write it to the output with reachability <em>undefined</em>.</li>
+<li>If it is core, update the reachability of each of its ε-neighbours: <code>rd = max(core-dist(current), d(current, neighbour))</code>, keeping the minimum over all updates seen so far.</li>
+<li>Pop the unprocessed point with the smallest reachability, write it to the output with that value, and repeat step 5 from it.</li>
+<li>When the queue empties, start again from any remaining unprocessed point (its reachability is undefined — it begins a new cluster).</li>
+</ol>
+
+<p>The output is a list of (point, reachability) pairs. Plotted in order, this is the <strong>reachability plot</strong>: valleys are clusters, peaks are separations, and tall spikes are noise.</p>
+
+<h2 id="ex1">Solved example 1 — a full ordering, computed by hand</h2>
+
+<div class="box example">
+<span class="box-label">Points 1, 2, 3, 5, 8 on a line. eps = 2, MinPts = 3</span>
+
+<p><strong>Step 1 — core distances.</strong> For each point, list the distances to all points within ε, sort them, and take the MinPts-th (the third).</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Point</th><th>Neighbours within ε=2</th><th>Sorted distances</th><th>Core distance</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>1, 2, 3</td><td>0, 1, 2</td><td><strong>2</strong></td></tr>
+<tr><td>2</td><td>1, 2, 3</td><td>0, 1, 1</td><td><strong>1</strong></td></tr>
+<tr><td>3</td><td>1, 2, 3, 5</td><td>0, 1, 2, 2</td><td><strong>2</strong></td></tr>
+<tr><td>5</td><td>3, 5</td><td>0, 2</td><td>undefined (only 2 points)</td></tr>
+<tr><td>8</td><td>8</td><td>0</td><td>undefined (only 1 point)</td></tr>
+</tbody></table></div>
+
+<p><strong>Step 2 — build the ordering.</strong> Start at point 1.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Step</th><th>Processed</th><th>Core dist</th><th>Updates to neighbours</th><th>Queue (point: reachability)</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><strong>1</strong> (rd undefined)</td><td>2</td><td>→2: max(2,1)=2 &nbsp; →3: max(2,2)=2</td><td>2:2, 3:2</td></tr>
+<tr><td>2</td><td><strong>2</strong> (rd = 2)</td><td>1</td><td>→3: max(1,1)=1, which beats 2</td><td>3:1</td></tr>
+<tr><td>3</td><td><strong>3</strong> (rd = 1)</td><td>2</td><td>→5: max(2,2)=2</td><td>5:2</td></tr>
+<tr><td>4</td><td><strong>5</strong> (rd = 2)</td><td>undefined</td><td>not core — no updates</td><td>empty</td></tr>
+<tr><td>5</td><td><strong>8</strong> (rd undefined)</td><td>undefined</td><td>new start — unreachable</td><td>empty</td></tr>
+</tbody></table></div>
+
+<p><strong>Result — the ordering and its reachability values:</strong></p>
+<div class="tablewrap"><table>
+<thead><tr><th>Order</th><th>1</th><th>2</th><th>3</th><th>5</th><th>8</th></tr></thead>
+<tbody>
+<tr><td>Reachability</td><td>—</td><td>2</td><td>1</td><td>2</td><td>— (∞)</td></tr>
+</tbody></table></div>
+
+<p><strong>Reading the plot:</strong> values 2, 1, 2 form a shallow valley over points 1–5, so those four are one cluster at density threshold around 2. Point 8 has an undefined reachability — it is separated by more than ε from everything — so it is either a cluster of its own or noise.</p>
+</div>
+
+<h2 id="ex2">Solved example 2 — two clusters of very different density</h2>
+
+<div class="box example">
+<span class="box-label">Dense cluster 1, 1.5, 2, 2.5 and sparse cluster 10, 12, 14. MinPts = 3, eps = 5</span>
+
+<p><strong>Core distances with ε = 5:</strong></p>
+<div class="tablewrap"><table>
+<thead><tr><th>Point</th><th>Neighbours within 5</th><th>Sorted distances</th><th>Core distance</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>1, 1.5, 2, 2.5</td><td>0, 0.5, 1, 1.5</td><td>1.0</td></tr>
+<tr><td>1.5</td><td>1, 1.5, 2, 2.5</td><td>0, 0.5, 0.5, 1</td><td>0.5</td></tr>
+<tr><td>2</td><td>1, 1.5, 2, 2.5</td><td>0, 0.5, 0.5, 1</td><td>0.5</td></tr>
+<tr><td>2.5</td><td>1, 1.5, 2, 2.5</td><td>0, 0.5, 1, 1.5</td><td>1.0</td></tr>
+<tr><td>10</td><td>10, 12, 14</td><td>0, 2, 4</td><td><strong>4.0</strong></td></tr>
+<tr><td>12</td><td>10, 12, 14</td><td>0, 2, 2</td><td><strong>2.0</strong></td></tr>
+<tr><td>14</td><td>10, 12, 14</td><td>0, 2, 4</td><td><strong>4.0</strong></td></tr>
+</tbody></table></div>
+
+<p><strong>Reachability values produced</strong> (using the max rule):</p>
+<ul>
+<li>Within the dense cluster: values between <strong>0.5 and 1.5</strong>. For example from 1 (core distance 1.0) to 1.5 the reachability is max(1.0, 0.5) = 1.0; from 1.5 (core distance 0.5) to 2 it is max(0.5, 0.5) = 0.5.</li>
+<li>Within the sparse cluster: from 10 (core distance 4.0) to 12 the reachability is max(4.0, 2.0) = <strong>4.0</strong>; from 12 (core distance 2.0) to 14 it is max(2.0, 2.0) = <strong>2.0</strong>.</li>
+</ul>
+
+<p><strong>The reachability plot therefore shows two valleys of very different depth:</strong> roughly 0.5–1.5 for the first cluster and 2.0–4.0 for the second, separated by a large gap where the ordering jumps between them.</p>
+
+<p><strong>Why this matters.</strong> Run DBSCAN on the same data with ε = 2 and MinPts = 3. The dense cluster is found — point 1 has four neighbours within 2. But point 10 has only {10, 12} within 2, which is fewer than 3, so the entire sparse cluster is labelled <strong>noise</strong>. OPTICS, with the same MinPts and a generous ε of 5, reports both valleys and lets you decide the cut afterwards.</p>
+</div>
+
+<div class="box why">
+<span class="box-label">The key sentence for an exam answer</span>
+<p>DBSCAN answers "what are the clusters at density ε?" — you must commit to ε before you see the answer. OPTICS answers "how does density vary across the data?" — the ordering contains results for <em>all</em> ε simultaneously, so you can extract clusters at whatever density threshold suits each region.</p>
+</div>
+
+<h2 id="extract">Extracting clusters from the ordering</h2>
+
+<p>Once you have the reachability plot, clusters are the valleys. Practical extraction methods:</p>
+
+<ul>
+<li><strong>Fixed threshold</strong> — cut the plot at a height \(\varepsilon'\); contiguous runs below it are clusters. This reproduces DBSCAN at that ε, but you can choose \(\varepsilon'\) after seeing the data.</li>
+<li><strong>Steepness / ξ</strong> — the original paper's method: find steep downward and upward slopes in the plot and use them to place cluster boundaries. This detects valleys of any depth, which is what makes it density-independent.</li>
+<li><strong>Hierarchical extraction</strong> — treat nested valleys as nested clusters, giving a dendrogram-like hierarchy.</li>
+</ul>
+
+<h2 id="compare">DBSCAN versus OPTICS</h2>
+
+<div class="tablewrap"><table>
+<thead><tr><th></th><th>DBSCAN</th><th>OPTICS</th></tr></thead>
+<tbody>
+<tr><td>Output</td><td>A cluster label per point</td><td>An ordering plus reachability distances</td></tr>
+<tr><td>Role of ε</td><td>Defines the result — must be right before running</td><td>An upper bound only — can be generous</td></tr>
+<tr><td>Varying density</td><td>Handled badly</td><td>The whole point</td></tr>
+<tr><td>Complexity</td><td>\(O(n\log n)\) with an index, \(O(n^2)\) without</td><td>Same order; slightly higher constant</td></tr>
+<tr><td>Extra step</td><td>None — labels come out directly</td><td>Must extract clusters from the plot afterwards</td></tr>
+<tr><td>Use when</td><td>One density is plausible and you want labels now</td><td>Densities differ, or you want to explore</td></tr>
+</tbody></table></div>
+
+<h2 id="code">Implementation</h2>
+
+<div class="codeblock">
+  <div class="codeblock-header"><span class="lang">Python</span><span class="file">optics.py</span><button class="copy-btn">Copy</button></div>
+<pre><code class="language-python">import heapq
+from math import dist
+
+UNDEF = float("inf")
+
+
+def core_distance(points, i, eps, min_pts):
+    """Distance to the MinPts-th nearest neighbour, or UNDEF if not core."""
+    d = sorted(dist(points[i], q) for q in points)
+    if len(d) < min_pts or d[min_pts - 1] > eps:
+        return UNDEF
+    return d[min_pts - 1]
+
+
+def optics(points, eps, min_pts):
+    n = len(points)
+    cd = [core_distance(points, i, eps, min_pts) for i in range(n)]
+    processed = [False] * n
+    reach = [UNDEF] * n
+    ordering = []
+
+    for start in range(n):
+        if processed[start]:
+            continue
+        processed[start] = True
+        ordering.append((start, UNDEF))
+        if cd[start] == UNDEF:
+            continue
+
+        heap = []
+        for j in range(n):
+            if not processed[j] and dist(points[start], points[j]) <= eps:
+                r = max(cd[start], dist(points[start], points[j]))
+                heapq.heappush(heap, (r, j))
+                reach[j] = min(reach[j], r)
+
+        while heap:
+            r, j = heapq.heappop(heap)
+            if processed[j]:
+                continue
+            processed[j] = True
+            ordering.append((j, r))
+            if cd[j] == UNDEF:
+                continue
+            for m in range(n):
+                if not processed[m] and dist(points[j], points[m]) <= eps:
+                    rr = max(cd[j], dist(points[j], points[m]))
+                    if rr < reach[m]:
+                        reach[m] = rr
+                        heapq.heappush(heap, (rr, m))
+
+    return ordering, cd, reach
+
+
+if __name__ == "__main__":
+    pts = [1, 2, 3, 5, 8]
+    order, cd, reach = optics(pts, eps=2, min_pts=3)
+    for i, r in order:
+        print(f"point {pts[i]:>2}   reachability = {'undefined' if r == UNDEF else r}")</code></pre>
+</div>
+
+<div class="codeblock">
+  <div class="codeblock-header"><span class="lang">Python</span><span class="file">with scikit-learn</span><button class="copy-btn">Copy</button></div>
+<pre><code class="language-python">from sklearn.cluster import OPTICS
+
+X = [[1], [1.5], [2], [2.5], [10], [12], [14]]
+cl = OPTICS(min_samples=3, max_eps=5).fit(X)
+print(cl.labels_)                     # -1 marks noise
+print(cl.reachability_)               # plot this against cl.ordering_</code></pre>
+</div>
+
+<h2 id="check">Check your understanding</h2>
+
+<div class="quiz">
+  <div class="qtext">In solved example 1, why is the reachability of point 2 equal to 2 and not 1?</div>
+  <div class="opts">
+    <button class="opt">Because the distance from 1 to 2 is 2</button>
+    <button class="opt" data-correct>Because it is the max of the core distance of point 1 (which is 2) and the distance 1 — so the core distance dominates</button>
+    <button class="opt">Because MinPts is 3</button>
+    <button class="opt">Because point 2 is not core</button>
+  </div>
+  <div class="fb">The distance d(1,2) is only 1, but point 1's core distance is 2, and reachability is the max of the two. That floor is deliberate: it makes every point in a sparse neighbourhood report a high value even when an individual pair happens to be close.</div>
+</div>
+
+<div class="quiz">
+  <div class="qtext">What does a tall spike in a reachability plot indicate?</div>
+  <div class="opts">
+    <button class="opt">A very dense cluster</button>
+    <button class="opt" data-correct>A boundary between clusters, or noise</button>
+    <button class="opt">A calculation error</button>
+    <button class="opt">That MinPts is too small</button>
+  </div>
+  <div class="fb">Reachability is low inside a dense region and jumps when the ordering moves to a point far from anything previously seen. Valleys are clusters; the rises between them are separations, and an isolated point produces the tallest spike of all.</div>
+</div>
+<nav class="pager" aria-label="Chapter navigation">
+<a href="../topics/12-dbscan.html"><span class="dir">← Previous</span><span class="ttl">12 · DBSCAN</span></a>
+<a class="next" href="../topics/14-hierarchical.html"><span class="dir">Next →</span><span class="ttl">14 · Hierarchical Clustering</span></a>
+</nav>
+<footer style="margin-top:56px;padding-top:22px;border-top:1px solid var(--rule);font-size:13px;color:var(--ink-3)">
+  <p style="margin:0 0 6px"><strong style="color:var(--ink-2)">Machine Learning</strong> — an interactive textbook built from the class notes of 27 Aug – 26 Oct 2026, with Alpaydin and Géron as references.</p>
+  <p style="margin:0">Progress is saved in this browser only. <a href="../glossary.html">Glossary</a> · <a href="../practice.html">Practice</a> · <a href="../visualizers.html">Visualizers</a></p>
+</footer>
+</main>
+</div>
+<script>window.ML_SEARCH = [{"title": "01 · The Machine-Learning Framework", "topic": "Chapter", "url": "topics/01-framework.html", "keywords": "machine learning, supervised, unsupervised, reinforcement, train test split, workflow What it means to learn from data, and how the whole subject divides."}, {"title": "02 · Linear Regression and Gradient Descent", "topic": "Chapter", "url": "topics/02-linear-regression.html", "keywords": "linear regression, hypothesis, cost function, gradient descent, learning rate, MSE Fitting a line by minimising squared error, and how gradient descent finds the minimum."}, {"title": "03 · Regression Metrics", "topic": "Chapter", "url": "topics/03-regression-metrics.html", "keywords": "MSE, MAE, RMSE, R squared, coefficient of determination, SSres, SStot MSE, MAE, RMSE and R-squared: what each one rewards and punishes."}, {"title": "04 · Bias, Variance and Regularisation", "topic": "Chapter", "url": "topics/04-bias-variance.html", "keywords": "bias, variance, underfitting, overfitting, regularisation, Lasso, Ridge, Elastic Net, L1, L2 Why a model that fits the training data perfectly can be worse than one that does not."}, {"title": "05 · Logistic Regression", "topic": "Chapter", "url": "topics/05-logistic-regression.html", "keywords": "logistic regression, sigmoid, log odds, decision boundary, log loss, cross entropy Turning a linear model into a classifier with the sigmoid and log-loss."}, {"title": "06 · Naive Bayes", "topic": "Chapter", "url": "topics/06-naive-bayes.html", "keywords": "naive bayes, Bayes theorem, prior, likelihood, posterior, evidence, Laplace smoothing Classification by Bayes theorem under a deliberately naive independence assumption."}, {"title": "07 · Decision Trees", "topic": "Chapter", "url": "topics/07-decision-trees.html", "keywords": "decision tree, entropy, information gain, Gini impurity, ID3, pruning Splitting the feature space by whichever question reduces impurity the most."}, {"title": "08 · K-Nearest Neighbours", "topic": "Chapter", "url": "topics/08-knn.html", "keywords": "KNN, k nearest neighbours, Euclidean distance, majority vote, lazy learner, curse of dimensionality The laziest classifier there is: look at the neighbours and take a vote."}, {"title": "09 · Classification Metrics", "topic": "Chapter", "url": "topics/09-classification-metrics.html", "keywords": "confusion matrix, accuracy, precision, recall, F1, sensitivity, specificity The confusion matrix, and why accuracy alone can be dangerously misleading."}, {"title": "10 · Support Vector Machines", "topic": "Chapter", "url": "topics/10-svm.html", "keywords": "SVM, support vector machine, hyperplane, margin, hard margin, soft margin, dual, kernel Finding the widest street between two classes, and the kernel trick for when a line will not do."}, {"title": "11 · k-Means Clustering", "topic": "Chapter", "url": "topics/11-kmeans.html", "keywords": "k-means, clustering, centroid, Lloyd, SSE, elbow method, unsupervised Partitioning points into k groups by alternating assignment and centroid updates."}, {"title": "12 · DBSCAN", "topic": "Chapter", "url": "topics/12-dbscan.html", "keywords": "DBSCAN, density, eps, minPts, core point, border point, noise, clustering Density-based clustering: find dense regions and label the rest as noise."}, {"title": "13 · OPTICS", "topic": "Chapter", "url": "topics/13-optics.html", "keywords": "OPTICS, reachability, core distance, ordering, density, clustering, variable density Ordering points by reachability so clusters of different densities all show up."}, {"title": "14 · Hierarchical Clustering", "topic": "Chapter", "url": "topics/14-hierarchical.html", "keywords": "hierarchical, agglomerative, divisive, dendrogram, linkage, single, complete, average, ward Building a nested tree of clusters bottom-up or top-down, and reading it as a dendrogram."}, {"title": "Interactive Visualizers", "topic": "Tool", "url": "visualizers.html", "keywords": "Gradient descent, k-means, the metrics calculator and an entropy explorer."}, {"title": "Practice and Examination Questions", "topic": "Tool", "url": "practice.html", "keywords": "Graded questions with full worked solutions."}, {"title": "Glossary", "topic": "Tool", "url": "glossary.html", "keywords": "Every term used in the course, defined in one line."}, {"title": "What it means to learn from data", "topic": "Ch 01", "url": "topics/01-framework.html#what", "keywords": "What it means to learn from data"}, {"title": "The three learning types", "topic": "Ch 01", "url": "topics/01-framework.html#types", "keywords": "The three learning types"}, {"title": "The anatomy of a learning problem", "topic": "Ch 01", "url": "topics/01-framework.html#anatomy", "keywords": "The anatomy of a learning problem"}, {"title": "The workflow, and where it goes wrong", "topic": "Ch 01", "url": "topics/01-framework.html#workflow", "keywords": "The workflow, and where it goes wrong"}, {"title": "Check your understanding", "topic": "Ch 01", "url": "topics/01-framework.html#check", "keywords": "Check your understanding"}, {"title": "The hypothesis", "topic": "Ch 02", "url": "topics/02-linear-regression.html#hypothesis", "keywords": "The hypothesis"}, {"title": "The cost function", "topic": "Ch 02", "url": "topics/02-linear-regression.html#cost", "keywords": "The cost function"}, {"title": "The gradient", "topic": "Ch 02", "url": "topics/02-linear-regression.html#gradient", "keywords": "The gradient"}, {"title": "The update rule", "topic": "Ch 02", "url": "topics/02-linear-regression.html#gd", "keywords": "The update rule"}, {"title": "Implementation", "topic": "Ch 02", "url": "topics/02-linear-regression.html#python", "keywords": "Implementation"}, {"title": "Three practical notes", "topic": "Ch 02", "url": "topics/02-linear-regression.html#pitfalls", "keywords": "Three practical notes"}, {"title": "Check your understanding", "topic": "Ch 02", "url": "topics/02-linear-regression.html#check", "keywords": "Check your understanding"}, {"title": "Why one number is not enough", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#why", "keywords": "Why one number is not enough"}, {"title": "Mean squared error", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#mse", "keywords": "Mean squared error"}, {"title": "Mean absolute error", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#mae", "keywords": "Mean absolute error"}, {"title": "Root mean squared error", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#rmse", "keywords": "Root mean squared error"}, {"title": "Coefficient of determination", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#r2", "keywords": "Coefficient of determination"}, {"title": "Check your understanding", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#check", "keywords": "Check your understanding"}, {"title": "Bias and variance defined", "topic": "Ch 04", "url": "topics/04-bias-variance.html#defs", "keywords": "Bias and variance defined"}, {"title": "Underfitting and overfitting", "topic": "Ch 04", "url": "topics/04-bias-variance.html#underover", "keywords": "Underfitting and overfitting"}, {"title": "Regularisation", "topic": "Ch 04", "url": "topics/04-bias-variance.html#reg", "keywords": "Regularisation"}, {"title": "Check your understanding", "topic": "Ch 04", "url": "topics/04-bias-variance.html#check", "keywords": "Check your understanding"}, {"title": "Why linear regression cannot be reused", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#why", "keywords": "Why linear regression cannot be reused"}, {"title": "The sigmoid", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#sigmoid", "keywords": "The sigmoid"}, {"title": "Odds and log-odds", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#odds", "keywords": "Odds and log-odds"}, {"title": "The decision boundary", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#boundary", "keywords": "The decision boundary"}, {"title": "The cost function, and why not squared error", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#cost", "keywords": "The cost function, and why not squared error"}, {"title": "The gradient", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#gradient", "keywords": "The gradient"}, {"title": "More than two classes", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#multiclass", "keywords": "More than two classes"}, {"title": "Check your understanding", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#check", "keywords": "Check your understanding"}, {"title": "Classification by probability", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#idea", "keywords": "Classification by probability"}, {"title": "The naive assumption", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#assumption", "keywords": "The naive assumption"}, {"title": "Worked example — the Play Tennis dataset", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#worked", "keywords": "Worked example — the Play Tennis dataset"}, {"title": "The zero-frequency problem", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#zero", "keywords": "The zero-frequency problem"}, {"title": "Continuous features", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#continuous", "keywords": "Continuous features"}, {"title": "Implementation", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#code", "keywords": "Implementation"}, {"title": "Check your understanding", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#check", "keywords": "Check your understanding"}, {"title": "Splitting the feature space", "topic": "Ch 07", "url": "topics/07-decision-trees.html#idea", "keywords": "Splitting the feature space"}, {"title": "Entropy", "topic": "Ch 07", "url": "topics/07-decision-trees.html#entropy", "keywords": "Entropy"}, {"title": "Information gain", "topic": "Ch 07", "url": "topics/07-decision-trees.html#ig", "keywords": "Information gain"}, {"title": "Worked example — the Tennis root node", "topic": "Ch 07", "url": "topics/07-decision-trees.html#worked", "keywords": "Worked example — the Tennis root node"}, {"title": "Gini impurity", "topic": "Ch 07", "url": "topics/07-decision-trees.html#gini", "keywords": "Gini impurity"}, {"title": "Pruning", "topic": "Ch 07", "url": "topics/07-decision-trees.html#pruning", "keywords": "Pruning"}, {"title": "Check your understanding", "topic": "Ch 07", "url": "topics/07-decision-trees.html#check", "keywords": "Check your understanding"}, {"title": "The laziest classifier", "topic": "Ch 08", "url": "topics/08-knn.html#idea", "keywords": "The laziest classifier"}, {"title": "The distance metric", "topic": "Ch 08", "url": "topics/08-knn.html#distance", "keywords": "The distance metric"}, {"title": "Worked example", "topic": "Ch 08", "url": "topics/08-knn.html#worked", "keywords": "Worked example"}, {"title": "Choosing k", "topic": "Ch 08", "url": "topics/08-knn.html#k", "keywords": "Choosing k"}, {"title": "Implementation", "topic": "Ch 08", "url": "topics/08-knn.html#code", "keywords": "Implementation"}, {"title": "Check your understanding", "topic": "Ch 08", "url": "topics/08-knn.html#check", "keywords": "Check your understanding"}, {"title": "The confusion matrix", "topic": "Ch 09", "url": "topics/09-classification-metrics.html#cm", "keywords": "The confusion matrix"}, {"title": "The four metrics", "topic": "Ch 09", "url": "topics/09-classification-metrics.html#metrics", "keywords": "The four metrics"}, {"title": "Worked example", "topic": "Ch 09", "url": "topics/09-classification-metrics.html#worked", "keywords": "Worked example"}, {"title": "Why accuracy alone is not enough", "topic": "Ch 09", "url": "topics/09-classification-metrics.html#accuracy", "keywords": "Why accuracy alone is not enough"}, {"title": "Check your understanding", "topic": "Ch 09", "url": "topics/09-classification-metrics.html#check", "keywords": "Check your understanding"}, {"title": "The widest street", "topic": "Ch 10", "url": "topics/10-svm.html#idea", "keywords": "The widest street"}, {"title": "The equation of a hyperplane", "topic": "Ch 10", "url": "topics/10-svm.html#equation", "keywords": "The equation of a hyperplane"}, {"title": "Maximising the margin", "topic": "Ch 10", "url": "topics/10-svm.html#margin", "keywords": "Maximising the margin"}, {"title": "The hard-margin objective", "topic": "Ch 10", "url": "topics/10-svm.html#hard", "keywords": "The hard-margin objective"}, {"title": "The dual formulation", "topic": "Ch 10", "url": "topics/10-svm.html#dual", "keywords": "The dual formulation"}, {"title": "The soft margin", "topic": "Ch 10", "url": "topics/10-svm.html#soft", "keywords": "The soft margin"}, {"title": "The kernel trick", "topic": "Ch 10", "url": "topics/10-svm.html#kernel", "keywords": "The kernel trick"}, {"title": "Check your understanding", "topic": "Ch 10", "url": "topics/10-svm.html#check", "keywords": "Check your understanding"}, {"title": "The problem k-means solves", "topic": "Ch 11", "url": "topics/11-kmeans.html#problem", "keywords": "The problem k-means solves"}, {"title": "The algorithm, step by step", "topic": "Ch 11", "url": "topics/11-kmeans.html#algorithm", "keywords": "The algorithm, step by step"}, {"title": "Solved example 1 — two dimensions, k = 2", "topic": "Ch 11", "url": "topics/11-kmeans.html#ex1", "keywords": "Solved example 1 — two dimensions, k = 2"}, {"title": "Solved example 2 — one dimension, k = 2", "topic": "Ch 11", "url": "topics/11-kmeans.html#ex2", "keywords": "Solved example 2 — one dimension, k = 2"}, {"title": "Choosing k", "topic": "Ch 11", "url": "topics/11-kmeans.html#choosing-k", "keywords": "Choosing k"}, {"title": "The five challenges of k-means", "topic": "Ch 11", "url": "topics/11-kmeans.html#challenges", "keywords": "The five challenges of k-means"}, {"title": "Implementation", "topic": "Ch 11", "url": "topics/11-kmeans.html#code", "keywords": "Implementation"}, {"title": "Check your understanding", "topic": "Ch 11", "url": "topics/11-kmeans.html#check", "keywords": "Check your understanding"}, {"title": "Clustering by density", "topic": "Ch 12", "url": "topics/12-dbscan.html#idea", "keywords": "Clustering by density"}, {"title": "The definitions", "topic": "Ch 12", "url": "topics/12-dbscan.html#definitions", "keywords": "The definitions"}, {"title": "The algorithm, step by step", "topic": "Ch 12", "url": "topics/12-dbscan.html#algorithm", "keywords": "The algorithm, step by step"}, {"title": "Solved example 1 — eps = 1.5, MinPts = 3", "topic": "Ch 12", "url": "topics/12-dbscan.html#ex1", "keywords": "Solved example 1 — eps = 1.5, MinPts = 3"}, {"title": "Solved example 2 — the same points with eps = 0.9", "topic": "Ch 12", "url": "topics/12-dbscan.html#ex2", "keywords": "Solved example 2 — the same points with eps = 0.9"}, {"title": "Choosing eps and MinPts", "topic": "Ch 12", "url": "topics/12-dbscan.html#params", "keywords": "Choosing eps and MinPts"}, {"title": "Strengths and weaknesses", "topic": "Ch 12", "url": "topics/12-dbscan.html#compare", "keywords": "Strengths and weaknesses"}, {"title": "Implementation", "topic": "Ch 12", "url": "topics/12-dbscan.html#code", "keywords": "Implementation"}, {"title": "Check your understanding", "topic": "Ch 12", "url": "topics/12-dbscan.html#check", "keywords": "Check your understanding"}, {"title": "The problem with a global eps", "topic": "Ch 13", "url": "topics/13-optics.html#why", "keywords": "The problem with a global eps"}, {"title": "The two new quantities", "topic": "Ch 13", "url": "topics/13-optics.html#definitions", "keywords": "The two new quantities"}, {"title": "The algorithm, step by step", "topic": "Ch 13", "url": "topics/13-optics.html#algorithm", "keywords": "The algorithm, step by step"}, {"title": "Solved example 1 — a full ordering, computed by hand", "topic": "Ch 13", "url": "topics/13-optics.html#ex1", "keywords": "Solved example 1 — a full ordering, computed by hand"}, {"title": "Solved example 2 — two clusters of very different density", "topic": "Ch 13", "url": "topics/13-optics.html#ex2", "keywords": "Solved example 2 — two clusters of very different density"}, {"title": "Extracting clusters from the ordering", "topic": "Ch 13", "url": "topics/13-optics.html#extract", "keywords": "Extracting clusters from the ordering"}, {"title": "DBSCAN versus OPTICS", "topic": "Ch 13", "url": "topics/13-optics.html#compare", "keywords": "DBSCAN versus OPTICS"}, {"title": "Implementation", "topic": "Ch 13", "url": "topics/13-optics.html#code", "keywords": "Implementation"}, {"title": "Check your understanding", "topic": "Ch 13", "url": "topics/13-optics.html#check", "keywords": "Check your understanding"}, {"title": "A tree instead of a partition", "topic": "Ch 14", "url": "topics/14-hierarchical.html#idea", "keywords": "A tree instead of a partition"}, {"title": "Linkage — how to measure distance between clusters", "topic": "Ch 14", "url": "topics/14-hierarchical.html#linkage", "keywords": "Linkage — how to measure distance between clusters"}, {"title": "Solved example 1 — single linkage", "topic": "Ch 14", "url": "topics/14-hierarchical.html#ex1", "keywords": "Solved example 1 — single linkage"}, {"title": "Solved example 2 — the same points with complete linkage", "topic": "Ch 14", "url": "topics/14-hierarchical.html#ex2", "keywords": "Solved example 2 — the same points with complete linkage"}, {"title": "Reading a dendrogram", "topic": "Ch 14", "url": "topics/14-hierarchical.html#dendrogram", "keywords": "Reading a dendrogram"}, {"title": "Compared with the other methods", "topic": "Ch 14", "url": "topics/14-hierarchical.html#compare", "keywords": "Compared with the other methods"}, {"title": "Check your understanding", "topic": "Ch 14", "url": "topics/14-hierarchical.html#check", "keywords": "Check your understanding"}];</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
