@@ -1,0 +1,197 @@
+<!--TOPIC:09-classification-metrics|Classification Metrics|-->
+<h2 id="cm">The confusion matrix</h2>
+
+<p>For binary classification there are four possible outcomes, and every metric is built from them.</p>
+
+<div class="tablewrap"><table>
+<thead><tr><th></th><th>Predicted positive</th><th>Predicted negative</th></tr></thead>
+<tbody>
+<tr><td><strong>Actual positive</strong></td><td>True positive (TP)</td><td>False negative (FN) — a miss</td></tr>
+<tr><td><strong>Actual negative</strong></td><td>False positive (FP) — a false alarm</td><td>True negative (TN)</td></tr>
+</tbody></table></div>
+
+<h2 id="metrics">The four metrics</h2>
+
+\[
+\text{Accuracy} = \frac{TP+TN}{TP+TN+FP+FN}
+\qquad
+\text{Precision} = \frac{TP}{TP+FP}
+\]
+
+\[
+\text{Recall} = \frac{TP}{TP+FN}
+\qquad
+F_1 = \frac{2 \cdot P \cdot R}{P + R}
+\]
+
+<p><strong>Precision</strong> answers: of everything I flagged, how much was right? <strong>Recall</strong> answers: of everything that was actually positive, how much did I catch? They trade against each other, and which one matters is a domain decision.</p>
+
+<div class="viz" id="viz-metrics">
+  <div class="viz-head">
+    <h3>Metrics calculator</h3>
+    <div class="viz-controls">
+      <label style="font-size:12px;color:var(--ink-3)">TP</label>
+      <input type="number" data-m="tp" value="40" min="0" style="width:58px">
+      <label style="font-size:12px;color:var(--ink-3)">FP</label>
+      <input type="number" data-m="fp" value="10" min="0" style="width:58px">
+      <label style="font-size:12px;color:var(--ink-3)">FN</label>
+      <input type="number" data-m="fn" value="15" min="0" style="width:58px">
+      <label style="font-size:12px;color:var(--ink-3)">TN</label>
+      <input type="number" data-m="tn" value="35" min="0" style="width:58px">
+    </div>
+  </div>
+  <div class="viz-stage"></div>
+  <div class="viz-log"></div>
+</div>
+
+<h2 id="worked">Worked example</h2>
+
+<div class="box example">
+<span class="box-label">100 test cases: TP = 40, FP = 10, FN = 15, TN = 35</span>
+<div class="tablewrap"><table>
+<thead><tr><th>Metric</th><th>Calculation</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>Accuracy</td><td>(40 + 35) / 100</td><td>0.750</td></tr>
+<tr><td>Precision</td><td>40 / (40 + 10)</td><td>0.800</td></tr>
+<tr><td>Recall</td><td>40 / (40 + 15)</td><td>0.727</td></tr>
+<tr><td>F1</td><td>2(0.8)(0.727) / (0.8 + 0.727)</td><td>0.762</td></tr>
+</tbody></table></div>
+<p>Note F1 is always between precision and recall, and equals both when they are equal. It is the harmonic mean, not the arithmetic mean, so a model that is excellent on one and terrible on the other scores poorly overall.</p>
+</div>
+
+<h2 id="accuracy">Why accuracy alone is not enough</h2>
+
+<div class="box warn">
+<span class="box-label">The imbalanced-data trap</span>
+<p>A fraud dataset has 1 % fraud. A model that predicts "not fraud" always scores <strong>99 % accuracy</strong> and catches nothing. Its precision is undefined (no positive predictions), its recall is 0, and it is worthless.</p>
+<p>This is why medical and fraud problems report recall and precision rather than accuracy. If an exam asks why accuracy is unsuitable, the answer is that it treats both error types as equally costly, which is almost never true.</p>
+</div>
+
+<div class="tablewrap"><table>
+<thead><tr><th>Situation</th><th>Favour</th><th>Reason</th></tr></thead>
+<tbody>
+<tr><td>Cancer screening</td><td>Recall</td><td>Missing a case is far worse than a false alarm that leads to a retest</td></tr>
+<tr><td>Spam filter</td><td>Precision</td><td>Deleting a real email is worse than letting spam through</td></tr>
+<tr><td>Balanced classes, both errors equal</td><td>Accuracy or F1</td><td>No asymmetry to exploit</td></tr>
+</tbody></table></div>
+
+<h2 id="check">Check your understanding</h2>
+
+<div class="quiz">
+  <div class="qtext">A model has precision 0.95 and recall 0.30. What is it doing?</div>
+  <div class="opts">
+    <button class="opt">Flagging almost everything</button>
+    <button class="opt" data-correct>Flagging only a small, very reliable subset — missing most positives</button>
+    <button class="opt">Overfitting</button>
+    <button class="opt">Behaving perfectly</button>
+  </div>
+  <div class="fb">High precision with low recall means the model is conservative: when it does predict positive it is almost always right, but it only predicts positive for a third of the true positives. To raise recall it must accept more false positives, which lowers precision — that is the trade.</div>
+</div>
+
+<!--TOPIC:10-svm|Support Vector Machines|-->
+<h2 id="idea">The widest street</h2>
+
+<p>Many lines can separate two classes. SVM picks the one with the largest margin — the greatest distance to the nearest point of either class. The intuition is that a boundary with room to spare on both sides is more robust to new data than one squeezing past a training point.</p>
+
+<div class="box def">
+<span class="box-label">Definitions</span>
+<p><strong>Hyperplane</strong> — the decision boundary, \(\theta^\top x + \theta_0 = 0\).<br>
+<strong>Margin</strong> — the distance from the hyperplane to the nearest training point.<br>
+<strong>Support vectors</strong> — those nearest points. They alone determine the boundary; every other point could be deleted without changing it.</p>
+</div>
+
+<h2 id="equation">The equation of a hyperplane</h2>
+
+<p>Given a normal vector \(\theta = (a,b)\) and a point \(P_0 = (x_0, y_0)\) on the plane:</p>
+
+\[
+a(x - x_0) + b(y - y_0) = 0 \quad\Longrightarrow\quad ax + by + c = 0
+\]
+
+<div class="box example">
+<span class="box-label">Worked example — the plane from a point and a normal</span>
+<p>Normal \(\theta = (1,2)\), passing through \(P_0 = (2,1)\).</p>
+<p>\(1(x-2) + 2(y-1) = 0 \Rightarrow x + 2y - 4 = 0\).</p>
+<p>Check: substituting (2,1) gives \(2 + 2 - 4 = 0\). ✓</p>
+<p>Distance from the origin: \(|{-4}|/\sqrt{1^2+2^2} = 4/\sqrt5 = 1.789\).</p>
+</div>
+
+<h2 id="margin">Maximising the margin</h2>
+
+<p>Scale the parameters so that the support vectors satisfy \(\theta^\top x + \theta_0 = \pm 1\). The distance between the two margin planes is then</p>
+
+\[
+\text{margin} = \frac{2}{\|\theta\|}
+\]
+
+<p>Maximising \(\frac{2}{\|\theta\|}\) is the same as minimising \(\|\theta\|\), which is the same as minimising \(\frac{1}{2}\|\theta\|^2\) — the form used because it differentiates cleanly.</p>
+
+<h2 id="hard">The hard-margin objective</h2>
+
+\[
+\min_{\theta,\theta_0} \frac{1}{2}\|\theta\|^2
+\quad\text{subject to}\quad
+y_i(\theta^\top x_i + \theta_0) \ge 1 \ \ \forall i
+\]
+
+<p>The constraints say every point is on the correct side and outside the margin. This assumes the data is <strong>linearly separable</strong> and has <strong>no outliers</strong> — two assumptions that fail on real data, which motivates the soft margin.</p>
+
+<h2 id="dual">The dual formulation</h2>
+
+<p>Introducing a Lagrange multiplier \(\alpha_i \ge 0\) per constraint turns the problem into its dual, which depends only on dot products between points:</p>
+
+\[
+\max_\alpha \sum_i \alpha_i - \frac{1}{2}\sum_i\sum_j \alpha_i\alpha_j y_i y_j (x_i^\top x_j)
+\quad\text{subject to}\quad \alpha_i \ge 0,\ \sum_i \alpha_i y_i = 0
+\]
+
+<p>and the solution is recovered as</p>
+
+\[
+\theta = \sum_i \alpha_i y_i x_i
+\]
+
+<p>Two facts follow. First, most \(\alpha_i\) come out exactly zero, and only the support vectors have non-zero \(\alpha\) — which is why the boundary depends on so few points. Second, because only the dot product \(x_i^\top x_j\) appears, you can replace it with a kernel function and never compute the higher-dimensional coordinates at all.</p>
+
+<h2 id="soft">The soft margin</h2>
+
+<p>Allow some points to violate the margin, paying a penalty \(\xi_i\) for each:</p>
+
+\[
+\min \frac{1}{2}\|\theta\|^2 + C\sum_i \xi_i
+\quad\text{subject to}\quad
+y_i(\theta^\top x_i + \theta_0) \ge 1 - \xi_i,\ \ \xi_i \ge 0
+\]
+
+<p>The hyperparameter \(C\) sets the trade: large \(C\) punishes violations heavily and gives a narrow margin (risk of overfitting); small \(C\) tolerates violations and gives a wide margin (risk of underfitting).</p>
+
+<h2 id="kernel">The kernel trick</h2>
+
+<p>If the classes are not linearly separable, map the data into a higher-dimensional space where they are. The kernel trick makes this free: you specify \(K(x_i, x_j) = \phi(x_i)^\top\phi(x_j)\) and the algorithm only ever needs that inner product.</p>
+
+<div class="tablewrap"><table>
+<thead><tr><th>Kernel</th><th>\(K(x, z)\)</th><th>Use</th></tr></thead>
+<tbody>
+<tr><td>Linear</td><td>\(x^\top z\)</td><td>Already separable; often best for text</td></tr>
+<tr><td>Polynomial</td><td>\((x^\top z + c)^d\)</td><td>Curved boundaries of degree \(d\)</td></tr>
+<tr><td>RBF (Gaussian)</td><td>\(\exp(-\gamma\|x-z\|^2)\)</td><td>Default choice; very flexible</td></tr>
+</tbody></table></div>
+
+<div class="box example">
+<span class="box-label">Worked example — why a mapping helps</span>
+<p>In one dimension, points at \(x = -1\) (class A) and \(x = +1\) (class B) with a point at \(x = 0\) of class B cannot be separated by a threshold. Map to \(\phi(x) = (x, x^2)\): the points become \((-1,1)\), \((1,1)\), \((0,0)\), and now a line separates \((0,0)\) from the other two. The problem was not linearly separable in 1-D and is in 2-D.</p>
+<p>The kernel trick computes \(\phi(x)^\top\phi(z)\) as \((x z + 1)^2\) without ever forming the 2-D vectors.</p>
+</div>
+
+<h2 id="check">Check your understanding</h2>
+
+<div class="quiz">
+  <div class="qtext">What is a support vector?</div>
+  <div class="opts">
+    <button class="opt">Any training point</button>
+    <button class="opt" data-correct>A training point lying on or inside the margin, which alone determines the boundary</button>
+    <button class="opt">A misclassified point</button>
+    <button class="opt">A feature with large variance</button>
+  </div>
+  <div class="fb">The boundary depends only on the points at the margin — in the dual formulation, only these have non-zero α. Deleting any other training point leaves the hyperplane unchanged, which is what makes SVM relatively robust and memory-efficient at prediction time.</div>
+</div>
