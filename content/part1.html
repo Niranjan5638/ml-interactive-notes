@@ -1,0 +1,384 @@
+<!--TOPIC:home|Home|-->
+<section class="hero">
+  <div class="kicker">Machine Learning · Mid-Semester</div>
+  <h1>Machine Learning</h1>
+  <p class="lede">An interactive textbook organised the way the subject actually divides: by how much supervision the data provides, and by what kind of answer you want back. Four modules, fourteen chapters, four live visualizers.</p>
+  <div class="hero-meta">
+    <span>14 chapters</span>
+    <span>4 modules</span>
+    <span>Worked numericals throughout</span>
+    <span id="progress-count" data-total="14">0 of 14 chapters complete</span>
+    <button class="reset-btn" id="reset-progress" type="button">Reset progress</button>
+  </div>
+  <p style="font-size:13px;color:var(--ink-3);margin:14px 0 0">Each chapter has a <strong>Mark this chapter complete</strong> checkbox at the top. Progress is stored in this browser only.</p>
+</section>
+
+<h2 id="taxonomy">How the subject divides</h2>
+
+<p>Every algorithm in this course answers one of two questions, and the answer determines which family it belongs to. If the data comes with the right answer attached, you are doing <strong>supervised</strong> learning; if not, <strong>unsupervised</strong>. Within each, the kind of answer you want splits it further: a number, a label, or a group.</p>
+
+<div class="tablewrap"><table>
+<thead><tr><th>Learning type</th><th>Data</th><th>Output</th><th>Sub-family</th><th>Algorithms in this course</th></tr></thead>
+<tbody>
+<tr><td rowspan="2"><strong>Supervised</strong></td><td rowspan="2">Features <em>and</em> labels</td><td>A continuous number</td><td><strong>Regression</strong></td><td>Linear regression, Ridge, Lasso, Elastic Net</td></tr>
+<tr><td>A discrete label</td><td><strong>Classification</strong></td><td>Logistic regression, naive Bayes, decision trees, KNN, SVM</td></tr>
+<tr><td rowspan="2"><strong>Unsupervised</strong></td><td rowspan="2">Features only, no labels</td><td>Groups of similar points</td><td><strong>Clustering</strong></td><td>k-means, DBSCAN, OPTICS, hierarchical</td></tr>
+<tr><td>A smaller set of features</td><td><strong>Dimensionality reduction</strong></td><td><em>Not covered in this course</em></td></tr>
+<tr><td><strong>Reinforcement</strong></td><td>Rewards from actions</td><td>A policy</td><td>—</td><td><em>Not covered in this course</em></td></tr>
+</tbody></table></div>
+
+<div class="box warn">
+<span class="box-label">The one naming trap worth fixing now</span>
+<p><strong>Logistic regression is a classification algorithm.</strong> The name is a historical accident — it fits a linear model and then passes it through a sigmoid to produce a probability, and the decision is made by thresholding that probability. It is in Module 3, not Module 2, and if an exam asks you to classify algorithms by task, putting it under regression is the classic error.</p>
+</div>
+
+<h2 id="chapters">Chapters</h2>
+
+<h3>Module 1 — Foundations</h3>
+<div class="grid">
+  <a class="card" href="topics/01-framework.html" data-topic-id="topic-01-framework">
+    <div class="cnum">Chapter 01</div>
+    <h3>The Machine-Learning Framework</h3>
+    <p>What it means to learn from data, the three learning types, and the workflow.</p>
+  </a>
+</div>
+
+<h3>Module 2 — Supervised: Regression</h3>
+<div class="grid">
+  <a class="card" href="topics/02-linear-regression.html" data-topic-id="topic-02-linear-regression">
+    <div class="cnum">Chapter 02</div>
+    <h3>Linear Regression and Gradient Descent</h3>
+    <p>Fitting a line by minimising squared error, and how gradient descent gets there.</p>
+  </a>
+  <a class="card" href="topics/03-regression-metrics.html" data-topic-id="topic-03-regression-metrics">
+    <div class="cnum">Chapter 03</div>
+    <h3>Regression Metrics</h3>
+    <p>MSE, MAE, RMSE and R² — what each one rewards and what it punishes.</p>
+  </a>
+  <a class="card" href="topics/04-bias-variance.html" data-topic-id="topic-04-bias-variance">
+    <div class="cnum">Chapter 04</div>
+    <h3>Bias, Variance and Regularisation</h3>
+    <p>Why a model that fits the training data perfectly can be worse than one that does not.</p>
+  </a>
+</div>
+
+<h3>Module 3 — Supervised: Classification</h3>
+<div class="grid">
+  <a class="card" href="topics/05-logistic-regression.html" data-topic-id="topic-05-logistic-regression">
+    <div class="cnum">Chapter 05</div>
+    <h3>Logistic Regression</h3>
+    <p>The sigmoid, log-loss, and the decision boundary.</p>
+  </a>
+  <a class="card" href="topics/06-naive-bayes.html" data-topic-id="topic-06-naive-bayes">
+    <div class="cnum">Chapter 06</div>
+    <h3>Naive Bayes</h3>
+    <p>Classification by Bayes theorem under a deliberately naive independence assumption.</p>
+  </a>
+  <a class="card" href="topics/07-decision-trees.html" data-topic-id="topic-07-decision-trees">
+    <div class="cnum">Chapter 07</div>
+    <h3>Decision Trees</h3>
+    <p>Entropy, information gain and Gini impurity — choosing the best question to ask.</p>
+  </a>
+  <a class="card" href="topics/08-knn.html" data-topic-id="topic-08-knn">
+    <div class="cnum">Chapter 08</div>
+    <h3>K-Nearest Neighbours</h3>
+    <p>The laziest classifier there is: look at the neighbours and take a vote.</p>
+  </a>
+  <a class="card" href="topics/09-classification-metrics.html" data-topic-id="topic-09-classification-metrics">
+    <div class="cnum">Chapter 09</div>
+    <h3>Classification Metrics</h3>
+    <p>The confusion matrix, and why accuracy alone can be dangerously misleading.</p>
+  </a>
+  <a class="card" href="topics/10-svm.html" data-topic-id="topic-10-svm">
+    <div class="cnum">Chapter 10</div>
+    <h3>Support Vector Machines</h3>
+    <p>Finding the widest street between two classes, and the kernel trick.</p>
+  </a>
+</div>
+
+<h3>Module 4 — Unsupervised: Clustering</h3>
+<div class="grid">
+  <a class="card" href="topics/11-kmeans.html" data-topic-id="topic-11-kmeans">
+    <div class="cnum">Chapter 11</div>
+    <h3>k-Means Clustering</h3>
+    <p>Alternating assignment and centroid updates, with two solved examples.</p>
+  </a>
+  <a class="card" href="topics/12-dbscan.html" data-topic-id="topic-12-dbscan">
+    <div class="cnum">Chapter 12</div>
+    <h3>DBSCAN</h3>
+    <p>Density-based clustering: core, border and noise, with two solved examples.</p>
+  </a>
+  <a class="card" href="topics/13-optics.html" data-topic-id="topic-13-optics">
+    <div class="cnum">Chapter 13</div>
+    <h3>OPTICS</h3>
+    <p>Reachability ordering, so clusters of different densities all show up.</p>
+  </a>
+  <a class="card" href="topics/14-hierarchical.html" data-topic-id="topic-14-hierarchical">
+    <div class="cnum">Chapter 14</div>
+    <h3>Hierarchical Clustering</h3>
+    <p>Building a nested tree of clusters and reading it as a dendrogram.</p>
+  </a>
+</div>
+
+<h2 id="tools">Tools</h2>
+<div class="grid">
+  <a class="card" href="visualizers.html">
+    <div class="cnum">Interactive</div>
+    <h3>Visualizers</h3>
+    <p>Run gradient descent, step through k-means, compute metrics, explore entropy.</p>
+  </a>
+  <a class="card" href="practice.html">
+    <div class="cnum">Assessment</div>
+    <h3>Practice Questions</h3>
+    <p>Recall, applied and exam-hard questions with worked solutions.</p>
+  </a>
+  <a class="card" href="glossary.html">
+    <div class="cnum">Reference</div>
+    <h3>Glossary</h3>
+    <p>Every term used in the course, defined in one line.</p>
+  </a>
+</div>
+
+<h2 id="scope">Scope, and what is not here</h2>
+<p>The course runs from 27 August to 26 October 2026 and covers the fourteen chapters above. Several topics that appear in most ML syllabi are <strong>not</strong> part of it: ensemble methods (bagging, boosting, random forests), cross-validation and ROC curves, model selection, dimensionality reduction and PCA, and neural networks. If any of those appear on your paper they are outside what has been taught.</p>
+<p>Some sections are marked <span class="pill supp">textbook-supplied</span> — they cover topics your notes name but never work out, such as logistic regression, Gini impurity, hierarchical clustering and OPTICS. Those are filled from Alpaydin and Géron rather than from the lectures.</p>
+
+<!--TOPIC:01-framework|The Machine-Learning Framework|-->
+<h2 id="what">What it means to learn from data</h2>
+
+<p>Traditional programming takes rules and data and produces answers. Machine learning inverts it: you supply examples of inputs and the answers you want, and the algorithm produces the rules. That inversion is the entire idea, and everything else in the course is machinery for doing it reliably.</p>
+
+<div class="box def">
+<span class="box-label">Definition — learning</span>
+<p>A program is said to <strong>learn</strong> from experience \(E\) with respect to task \(T\) and performance measure \(P\) if its performance at \(T\), measured by \(P\), improves with experience \(E\).</p>
+</div>
+
+<p>Concretely, for a spam filter: the task \(T\) is classifying email, the experience \(E\) is a set of emails already labelled spam or not, and the measure \(P\) is the fraction correctly classified on email it has never seen. Note the last clause — that is the part people get wrong.</p>
+
+<h2 id="types">The three learning types</h2>
+
+<div class="tablewrap"><table>
+<thead><tr><th>Type</th><th>What you have</th><th>What you get</th><th>Example</th></tr></thead>
+<tbody>
+<tr><td><strong>Supervised</strong></td><td>Features and labels</td><td>A function mapping features to labels</td><td>Predict house price from size and location</td></tr>
+<tr><td><strong>Unsupervised</strong></td><td>Features only</td><td>Structure — groups, or a lower-dimensional view</td><td>Group customers by purchasing behaviour</td></tr>
+<tr><td><strong>Reinforcement</strong></td><td>Rewards from acting</td><td>A policy for choosing actions</td><td>Learn to play a game by winning and losing</td></tr>
+</tbody></table></div>
+
+<p>Supervised learning splits again by the type of the label. If the label is a real number — price, temperature, run time — the task is <strong>regression</strong>. If it is a category — spam or not, benign or malignant, cat or dog — the task is <strong>classification</strong>. This distinction decides which loss function you use and which metrics you report, so it is worth being able to state it precisely.</p>
+
+<h2 id="anatomy">The anatomy of a learning problem</h2>
+
+<p>Five objects appear in every supervised learning problem, and an exam answer that names them will usually earn the marks for the setup.</p>
+
+<ol>
+<li><strong>Features</strong> \(x\) — the measured inputs, usually a vector. One row of your table is one example.</li>
+<li><strong>Label</strong> \(y\) — the answer for that row. \(y \in \mathbb{R}\) for regression, \(y \in \{0,1,\ldots\}\) for classification.</li>
+<li><strong>Hypothesis</strong> \(h_\theta(x)\) — a family of functions with parameters \(\theta\), chosen in advance.</li>
+<li><strong>Loss function</strong> \(L(h_\theta(x), y)\) — a number saying how wrong one prediction is.</li>
+<li><strong>Cost function</strong> \(J(\theta)\) — the loss averaged over the whole training set. Learning means finding \(\theta\) that minimises it.</li>
+</ol>
+
+<p>The choice of hypothesis family is the modeller's decision and it determines what the model can ever represent. A straight line cannot represent a curve no matter how long you train it — that is <strong>inductive bias</strong>, and chapter 4 shows why it is a feature rather than a flaw.</p>
+
+<h2 id="workflow">The workflow, and where it goes wrong</h2>
+
+<ol>
+<li><strong>State the task.</strong> Regression or classification? What does one row represent?</li>
+<li><strong>Split the data.</strong> Training set to fit parameters, validation set to tune choices, test set to report one final number.</li>
+<li><strong>Fit on the training set.</strong> Minimise \(J(\theta)\).</li>
+<li><strong>Tune on the validation set.</strong> Never on the test set.</li>
+<li><strong>Report on the test set.</strong> Once.</li>
+</ol>
+
+<div class="box warn">
+<span class="box-label">The mistake that invalidates an entire project</span>
+<p>If you tune anything — learning rate, \(k\), tree depth, number of clusters — by looking at test-set performance, the test set has become part of training and your reported number is optimistic. This is called <strong>data leakage</strong>, and it is the single most common way machine-learning results turn out to be wrong. The validation set exists precisely so the test set is touched once.</p>
+</div>
+
+<div class="box example">
+<span class="box-label">Worked example — stating a problem properly</span>
+<p><em>Predict whether a loan applicant will default.</em></p>
+<p><strong>Task:</strong> binary classification. <strong>One row:</strong> one applicant. <strong>Features:</strong> income, existing debt, credit history length, employment years. <strong>Label:</strong> defaulted within 12 months (1) or not (0). <strong>Hypothesis:</strong> a logistic model — chapter 5. <strong>Loss:</strong> log-loss. <strong>Metric:</strong> recall on the default class, because missing a default costs far more than refusing a good applicant.</p>
+<p>Note the last line. The metric is a business decision, not a mathematical one, and choosing accuracy instead would be wrong: with a 5 % default rate, predicting "nobody defaults" scores 95 % accuracy and is useless.</p>
+</div>
+
+<h2 id="check">Check your understanding</h2>
+
+<div class="quiz">
+  <div class="qtext">Predicting the selling price of a used car from its age, mileage and brand is which kind of problem?</div>
+  <div class="opts">
+    <button class="opt">Classification</button>
+    <button class="opt" data-correct>Regression</button>
+    <button class="opt">Clustering</button>
+    <button class="opt">Reinforcement learning</button>
+  </div>
+  <div class="fb">The label is a price — a continuous real number, not a category. Predicting a quantity is regression; predicting which category something falls into is classification. The distinction decides the loss function (squared error rather than log-loss) and the metrics (R² rather than F1).</div>
+</div>
+
+<div class="quiz">
+  <div class="qtext">Why does a separate validation set exist?</div>
+  <div class="opts">
+    <button class="opt">To give the model more data to train on</button>
+    <button class="opt" data-correct>To tune choices without contaminating the test set, so the final number is honest</button>
+    <button class="opt">Because training sets must be split in three by law</button>
+    <button class="opt">To measure training error</button>
+  </div>
+  <div class="fb">Every decision made by looking at a dataset leaks information from it into the model. If you tuned hyperparameters against the test set, the test score is no longer an estimate of performance on unseen data. The validation set absorbs that tuning so the test set stays untouched until the end.</div>
+</div>
+
+<!--TOPIC:02-linear-regression|Linear Regression and Gradient Descent|-->
+<h2 id="hypothesis">The hypothesis</h2>
+
+<p>Start with the simplest possible model: a straight line.</p>
+
+\[
+h_\theta(x) = \theta_0 + \theta_1 x
+\]
+
+<p>\(\theta_1\) is the slope — how much the output changes per unit of input — and \(\theta_0\) is the intercept, the prediction when \(x = 0\). The subscript on \(h\) is there to remind you that the function is not fixed: it is a whole family of lines, and learning means choosing which member of that family to keep.</p>
+
+<div class="box why">
+<span class="box-label">Why a line, and not something more flexible</span>
+<p>Because it is the model with the least inductive bias that is still useful: it assumes only that the relationship is monotone and additive. If the truth is a curve, a line will underfit — but a line that underfits is honest about it, and the residuals tell you to move on. Starting with the most flexible model available hides errors instead of revealing them.</p>
+</div>
+
+<h2 id="cost">The cost function</h2>
+
+<p>For each example, the <strong>residual</strong> is the gap between prediction and truth: \(h_\theta(x_i) - y_i\). We need a single number summarising all the residuals, and the choice is the <strong>mean squared error</strong>:</p>
+
+\[
+J(\theta_0, \theta_1) = \frac{1}{n}\sum_{i=1}^{n}\bigl(h_\theta(x_i) - y_i\bigr)^2
+\]
+
+<p>Squaring does three things: it makes every term non-negative so errors cannot cancel, it penalises large errors much more than small ones, and — the reason it is preferred over absolute value — it makes the function differentiable everywhere, which gradient descent needs.</p>
+
+<div class="box example">
+<span class="box-label">Worked example — evaluating the cost by hand</span>
+<p>Data: \((1,2), (2,3), (3,5)\). Take the starting guess \(\theta_0 = 0, \theta_1 = 0\).</p>
+<p>Predictions: \(0, 0, 0\). Residuals: \(-2, -3, -5\).</p>
+<p>\(J = \frac{1}{3}\bigl(4 + 9 + 25\bigr) = \frac{38}{3} = 12.667\).</p>
+<p>Now try \(\theta_0 = 0.333, \theta_1 = 1.5\), which turns out to be the least-squares optimum. Predictions: \(1.833, 3.333, 4.833\). Residuals: \(-0.167, 0.333, 0.167\).</p>
+<p>\(J = \frac{1}{3}\bigl(0.0278 + 0.1111 + 0.0278\bigr) = \frac{0.1667}{3} = 0.0556\).</p>
+<p>The cost fell from 12.667 to 0.056 — a factor of 228.</p>
+</div>
+
+<h2 id="gradient">The gradient</h2>
+
+<p>To descend, we need the direction of steepest increase, which is the vector of partial derivatives. Differentiating \(J\) with respect to each parameter:</p>
+
+\[
+\frac{\partial J}{\partial \theta_0} = \frac{2}{n}\sum_{i=1}^{n}\bigl(h_\theta(x_i) - y_i\bigr)
+\qquad
+\frac{\partial J}{\partial \theta_1} = \frac{2}{n}\sum_{i=1}^{n}\bigl(h_\theta(x_i) - y_i\bigr)\,x_i
+\]
+
+<p>Read them carefully: both are averages of the residual. The second is weighted by \(x_i\), which makes intuitive sense — if a large \(x\) produced a large error, the slope is the parameter at fault, so the slope gets the larger correction.</p>
+
+<div class="box example">
+<span class="box-label">Worked example — one gradient step</span>
+<p>Same data \((1,2),(2,3),(3,5)\), starting at \(\theta_0 = 0, \theta_1 = 0\), with learning rate \(\alpha = 0.01\).</p>
+<p>Residuals are \(-2, -3, -5\).</p>
+<p>\(\frac{\partial J}{\partial \theta_0} = \frac{2}{3}(-10) = -6.667\)</p>
+<p>\(\frac{\partial J}{\partial \theta_1} = \frac{2}{3}\bigl((-2)(1) + (-3)(2) + (-5)(3)\bigr) = \frac{2}{3}(-23) = -15.333\)</p>
+<p>Update: \(\theta_0 = 0 - 0.01(-6.667) = 0.0667\), and \(\theta_1 = 0 - 0.01(-15.333) = 0.1533\).</p>
+<p>Both parameters moved in the positive direction because both gradients were negative — the update always steps <em>against</em> the gradient.</p>
+</div>
+
+<h2 id="gd">The update rule</h2>
+
+<p>Repeat until the cost stops falling:</p>
+
+\[
+\theta_j := \theta_j - \alpha\,\frac{\partial J}{\partial \theta_j} \quad \text{for } j = 0,1
+\]
+
+<p>The <strong>learning rate</strong> \(\alpha\) controls the step size, and it is the parameter that most often breaks a run. Too small and convergence takes forever; too large and the cost diverges — the steps overshoot the minimum and land further up the opposite wall each time.</p>
+
+<div class="box warn">
+<span class="box-label">The mistake in the update</span>
+<p>Both parameters must be updated <strong>simultaneously</strong>, using the gradients computed <em>before</em> either is changed. If you update \(\theta_0\) first and then compute the gradient for \(\theta_1\) using the new \(\theta_0\), you are running a different algorithm. Compute both gradients, store them, then apply both.</p>
+</div>
+
+<h2 id="python">Implementation</h2>
+
+<div class="codeblock">
+  <div class="codeblock-header"><span class="lang">Python</span><span class="file">linear_regression.py</span><button class="copy-btn">Copy</button></div>
+<pre><code class="language-python">def gradient_descent(xs, ys, alpha=0.01, epochs=2000):
+    """Fit y = theta0 + theta1 * x by batch gradient descent."""
+    n = len(xs)
+    theta0 = theta1 = 0.0
+
+    for _ in range(epochs):
+        # accumulate both gradients BEFORE touching either parameter
+        g0 = g1 = 0.0
+        for x, y in zip(xs, ys):
+            residual = theta0 + theta1 * x - y
+            g0 += residual
+            g1 += residual * x
+        g0 *= 2 / n
+        g1 *= 2 / n
+
+        theta0 -= alpha * g0
+        theta1 -= alpha * g1
+
+    return theta0, theta1
+
+
+def cost(xs, ys, theta0, theta1):
+    n = len(xs)
+    return sum((theta0 + theta1 * x - y) ** 2 for x, y in zip(xs, ys)) / n
+
+
+if __name__ == "__main__":
+    xs = [1, 2, 3]
+    ys = [2, 3, 5]
+    t0, t1 = gradient_descent(xs, ys)
+    print(f"theta0 = {t0:.4f}  theta1 = {t1:.4f}")   # 0.3333  1.5000
+    print(f"cost   = {cost(xs, ys, t0, t1):.6f}")     # 0.055556</code></pre>
+</div>
+
+<p>In practice nobody hand-rolls this. <code>sklearn.linear_model.LinearRegression</code> solves the normal equations directly, which is exact and needs no learning rate:</p>
+
+<div class="codeblock">
+  <div class="codeblock-header"><span class="lang">Python</span><span class="file">with scikit-learn</span><button class="copy-btn">Copy</button></div>
+<pre><code class="language-python">from sklearn.linear_model import LinearRegression
+
+X = [[1], [2], [3]]          # must be 2-D: one column per feature
+y = [2, 3, 5]
+
+model = LinearRegression().fit(X, y)
+print(model.intercept_, model.coef_)   # 0.3333... [1.5]</code></pre>
+</div>
+
+<h2 id="pitfalls">Three practical notes</h2>
+
+<ol>
+<li><strong>Feature scaling.</strong> If one feature ranges over thousands and another over single digits, the cost surface becomes a long thin valley and gradient descent zig-zags. Standardising features fixes it.</li>
+<li><strong>Batch versus stochastic.</strong> Batch gradient descent uses all \(n\) examples per step — accurate but slow. Stochastic uses one example per step — noisy but fast. Mini-batch is the compromise everyone actually uses.</li>
+<li><strong>Closed form versus iterative.</strong> For linear regression the exact solution exists: \(\theta = (X^\top X)^{-1}X^\top y\). Gradient descent is used because the same machinery extends to models where no closed form exists, such as logistic regression and neural networks.</li>
+</ol>
+
+<h2 id="check">Check your understanding</h2>
+
+<div class="quiz">
+  <div class="qtext">Gradient descent with too large a learning rate typically causes what?</div>
+  <div class="opts">
+    <button class="opt">Slower but stable convergence</button>
+    <button class="opt" data-correct>The cost to oscillate or diverge, growing each step</button>
+    <button class="opt">The model to underfit permanently</button>
+    <button class="opt">Nothing — the rate only affects speed</button>
+  </div>
+  <div class="fb">Each step moves distance α times the gradient. If α is large enough that a step overshoots the minimum and lands higher on the opposite side, the next gradient is larger still, so the following step overshoots further. The cost grows without bound rather than settling.</div>
+</div>
+
+<div class="quiz">
+  <div class="qtext">Why is squared error preferred to absolute error for the cost function here?</div>
+  <div class="opts">
+    <button class="opt">It is always a better measure of accuracy</button>
+    <button class="opt" data-correct>It is differentiable everywhere, so the gradient exists at every point</button>
+    <button class="opt">It is less sensitive to outliers</button>
+    <button class="opt">It produces smaller numbers</button>
+  </div>
+  <div class="fb">Absolute error has a kink at zero, where the derivative is undefined, so gradient descent has no direction to step in there. Squared error is smooth everywhere. Note the third option is exactly backwards — squaring makes the cost <em>more</em> sensitive to outliers, which is why MAE exists as an alternative.</div>
+</div>
