@@ -300,57 +300,6 @@ J(\theta_0, \theta_1) = \frac{1}{n}\sum_{i=1}^{n}\bigl(h_\theta(x_i) - y_i\bigr)
 <p>Both parameters must be updated <strong>simultaneously</strong>, using the gradients computed <em>before</em> either is changed. If you update \(\theta_0\) first and then compute the gradient for \(\theta_1\) using the new \(\theta_0\), you are running a different algorithm. Compute both gradients, store them, then apply both.</p>
 </div>
 
-<h2 id="python">Implementation</h2>
-
-<div class="codeblock">
-  <div class="codeblock-header"><span class="lang">Python</span><span class="file">linear_regression.py</span><button class="copy-btn">Copy</button></div>
-<pre><code class="language-python">def gradient_descent(xs, ys, alpha=0.01, epochs=2000):
-    """Fit y = theta0 + theta1 * x by batch gradient descent."""
-    n = len(xs)
-    theta0 = theta1 = 0.0
-
-    for _ in range(epochs):
-        # accumulate both gradients BEFORE touching either parameter
-        g0 = g1 = 0.0
-        for x, y in zip(xs, ys):
-            residual = theta0 + theta1 * x - y
-            g0 += residual
-            g1 += residual * x
-        g0 *= 2 / n
-        g1 *= 2 / n
-
-        theta0 -= alpha * g0
-        theta1 -= alpha * g1
-
-    return theta0, theta1
-
-
-def cost(xs, ys, theta0, theta1):
-    n = len(xs)
-    return sum((theta0 + theta1 * x - y) ** 2 for x, y in zip(xs, ys)) / n
-
-
-if __name__ == "__main__":
-    xs = [1, 2, 3]
-    ys = [2, 3, 5]
-    t0, t1 = gradient_descent(xs, ys)
-    print(f"theta0 = {t0:.4f}  theta1 = {t1:.4f}")   # 0.3333  1.5000
-    print(f"cost   = {cost(xs, ys, t0, t1):.6f}")     # 0.055556</code></pre>
-</div>
-
-<p>In practice nobody hand-rolls this. <code>sklearn.linear_model.LinearRegression</code> solves the normal equations directly, which is exact and needs no learning rate:</p>
-
-<div class="codeblock">
-  <div class="codeblock-header"><span class="lang">Python</span><span class="file">with scikit-learn</span><button class="copy-btn">Copy</button></div>
-<pre><code class="language-python">from sklearn.linear_model import LinearRegression
-
-X = [[1], [2], [3]]          # must be 2-D: one column per feature
-y = [2, 3, 5]
-
-model = LinearRegression().fit(X, y)
-print(model.intercept_, model.coef_)   # 0.3333... [1.5]</code></pre>
-</div>
-
 <h2 id="pitfalls">Three practical notes</h2>
 
 <ol>
