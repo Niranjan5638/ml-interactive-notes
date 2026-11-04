@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>02 · Linear Regression and Gradient Descent · ML Notes</title>
+<meta name="description" content="Fitting a line by minimising squared error, and how gradient descent finds the minimum.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,400&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']] },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+  };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css">
+</head>
+<body data-page="topic-02-linear-regression">
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../index.html">ML<span>.</span>Notes</a>
+    <nav class="topnav">
+      <a href="../index.html">Home</a>
+      <a href="../topics/01-framework.html">Chapters</a>
+      <a href="../visualizers.html">Visualizers</a>
+      <a href="../practice.html">Practice</a>
+      <a href="../glossary.html">Glossary</a>
+    </nav>
+    <div class="searchbox">
+      <input id="search-input" type="search" placeholder="Search topics…  ( / )" autocomplete="off" aria-label="Search the textbook">
+      <div class="searchresults" id="search-results"></div>
+    </div>
+  </div>
+</header>
+<div class="shell">
+<nav class="sidebar" aria-label="Chapter navigation">
+<div class="side-group">Foundations</div>
+<a href="../topics/01-framework.html" data-topic-id="topic-01-framework">01 · The Machine-Learning Framework</a>
+<div class="side-group">Supervised Learning — Regression</div>
+<a href="../topics/02-linear-regression.html" data-topic-id="topic-02-linear-regression" class="active">02 · Linear Regression and Gradient Descent</a>
+<a href="../topics/03-regression-metrics.html" data-topic-id="topic-03-regression-metrics">03 · Regression Metrics</a>
+<a href="../topics/04-bias-variance.html" data-topic-id="topic-04-bias-variance">04 · Bias, Variance and Regularisation</a>
+<div class="side-group">Supervised Learning — Classification</div>
+<a href="../topics/05-logistic-regression.html" data-topic-id="topic-05-logistic-regression">05 · Logistic Regression</a>
+<a href="../topics/06-naive-bayes.html" data-topic-id="topic-06-naive-bayes">06 · Naive Bayes</a>
+<a href="../topics/07-decision-trees.html" data-topic-id="topic-07-decision-trees">07 · Decision Trees</a>
+<a href="../topics/08-knn.html" data-topic-id="topic-08-knn">08 · K-Nearest Neighbours</a>
+<a href="../topics/09-classification-metrics.html" data-topic-id="topic-09-classification-metrics">09 · Classification Metrics</a>
+<a href="../topics/10-svm.html" data-topic-id="topic-10-svm">10 · Support Vector Machines</a>
+<div class="side-group">Unsupervised Learning — Clustering</div>
+<a href="../topics/11-kmeans.html" data-topic-id="topic-11-kmeans">11 · k-Means Clustering</a>
+<a href="../topics/12-dbscan.html" data-topic-id="topic-12-dbscan">12 · DBSCAN</a>
+<a href="../topics/13-optics.html" data-topic-id="topic-13-optics">13 · OPTICS</a>
+<a href="../topics/14-hierarchical.html" data-topic-id="topic-14-hierarchical">14 · Hierarchical Clustering</a>
+<div class="side-group">Tools</div>
+<a href="../visualizers.html">Interactive Visualizers</a>
+<a href="../practice.html">Practice and Examination Questions</a>
+<a href="../glossary.html">Glossary</a>
+</nav>
+<main>
+<div class="kicker">Chapter 02</div>
+<h1>Linear Regression and Gradient Descent</h1>
+<p class="lede">Fitting a line by minimising squared error, and how gradient descent finds the minimum.</p>
+<label class="chapter-check"><input type="checkbox" data-complete="topic-02-linear-regression" aria-label="Mark this chapter complete"><span class="cc-text">Mark this chapter complete</span></label>
+<h2 id="hypothesis">The hypothesis</h2>
+
+<p>Start with the simplest possible model: a straight line.</p>
+
+\[
+h_\theta(x) = \theta_0 + \theta_1 x
+\]
+
+<p>\(\theta_1\) is the slope — how much the output changes per unit of input — and \(\theta_0\) is the intercept, the prediction when \(x = 0\). The subscript on \(h\) is there to remind you that the function is not fixed: it is a whole family of lines, and learning means choosing which member of that family to keep.</p>
+
+<div class="box why">
+<span class="box-label">Why a line, and not something more flexible</span>
+<p>Because it is the model with the least inductive bias that is still useful: it assumes only that the relationship is monotone and additive. If the truth is a curve, a line will underfit — but a line that underfits is honest about it, and the residuals tell you to move on. Starting with the most flexible model available hides errors instead of revealing them.</p>
+</div>
+
+<h2 id="cost">The cost function</h2>
+
+<p>For each example, the <strong>residual</strong> is the gap between prediction and truth: \(h_\theta(x_i) - y_i\). We need a single number summarising all the residuals, and the choice is the <strong>mean squared error</strong>:</p>
+
+\[
+J(\theta_0, \theta_1) = \frac{1}{n}\sum_{i=1}^{n}\bigl(h_\theta(x_i) - y_i\bigr)^2
+\]
+
+<p>Squaring does three things: it makes every term non-negative so errors cannot cancel, it penalises large errors much more than small ones, and — the reason it is preferred over absolute value — it makes the function differentiable everywhere, which gradient descent needs.</p>
+
+<div class="box example">
+<span class="box-label">Worked example — evaluating the cost by hand</span>
+<p>Data: \((1,2), (2,3), (3,5)\). Take the starting guess \(\theta_0 = 0, \theta_1 = 0\).</p>
+<p>Predictions: \(0, 0, 0\). Residuals: \(-2, -3, -5\).</p>
+<p>\(J = \frac{1}{3}\bigl(4 + 9 + 25\bigr) = \frac{38}{3} = 12.667\).</p>
+<p>Now try \(\theta_0 = 0.333, \theta_1 = 1.5\), which turns out to be the least-squares optimum. Predictions: \(1.833, 3.333, 4.833\). Residuals: \(-0.167, 0.333, 0.167\).</p>
+<p>\(J = \frac{1}{3}\bigl(0.0278 + 0.1111 + 0.0278\bigr) = \frac{0.1667}{3} = 0.0556\).</p>
+<p>The cost fell from 12.667 to 0.056 — a factor of 228.</p>
+</div>
+
+<h2 id="gradient">The gradient</h2>
+
+<p>To descend, we need the direction of steepest increase, which is the vector of partial derivatives. Differentiating \(J\) with respect to each parameter:</p>
+
+\[
+\frac{\partial J}{\partial \theta_0} = \frac{2}{n}\sum_{i=1}^{n}\bigl(h_\theta(x_i) - y_i\bigr)
+\qquad
+\frac{\partial J}{\partial \theta_1} = \frac{2}{n}\sum_{i=1}^{n}\bigl(h_\theta(x_i) - y_i\bigr)\,x_i
+\]
+
+<p>Read them carefully: both are averages of the residual. The second is weighted by \(x_i\), which makes intuitive sense — if a large \(x\) produced a large error, the slope is the parameter at fault, so the slope gets the larger correction.</p>
+
+<div class="box example">
+<span class="box-label">Worked example — one gradient step</span>
+<p>Same data \((1,2),(2,3),(3,5)\), starting at \(\theta_0 = 0, \theta_1 = 0\), with learning rate \(\alpha = 0.01\).</p>
+<p>Residuals are \(-2, -3, -5\).</p>
+<p>\(\frac{\partial J}{\partial \theta_0} = \frac{2}{3}(-10) = -6.667\)</p>
+<p>\(\frac{\partial J}{\partial \theta_1} = \frac{2}{3}\bigl((-2)(1) + (-3)(2) + (-5)(3)\bigr) = \frac{2}{3}(-23) = -15.333\)</p>
+<p>Update: \(\theta_0 = 0 - 0.01(-6.667) = 0.0667\), and \(\theta_1 = 0 - 0.01(-15.333) = 0.1533\).</p>
+<p>Both parameters moved in the positive direction because both gradients were negative — the update always steps <em>against</em> the gradient.</p>
+</div>
+
+<h2 id="gd">The update rule</h2>
+
+<p>Repeat until the cost stops falling:</p>
+
+\[
+\theta_j := \theta_j - \alpha\,\frac{\partial J}{\partial \theta_j} \quad \text{for } j = 0,1
+\]
+
+<p>The <strong>learning rate</strong> \(\alpha\) controls the step size, and it is the parameter that most often breaks a run. Too small and convergence takes forever; too large and the cost diverges — the steps overshoot the minimum and land further up the opposite wall each time.</p>
+
+<div class="box warn">
+<span class="box-label">The mistake in the update</span>
+<p>Both parameters must be updated <strong>simultaneously</strong>, using the gradients computed <em>before</em> either is changed. If you update \(\theta_0\) first and then compute the gradient for \(\theta_1\) using the new \(\theta_0\), you are running a different algorithm. Compute both gradients, store them, then apply both.</p>
+</div>
+
+<h2 id="python">Implementation</h2>
+
+<div class="codeblock">
+  <div class="codeblock-header"><span class="lang">Python</span><span class="file">linear_regression.py</span><button class="copy-btn">Copy</button></div>
+<pre><code class="language-python">def gradient_descent(xs, ys, alpha=0.01, epochs=2000):
+    """Fit y = theta0 + theta1 * x by batch gradient descent."""
+    n = len(xs)
+    theta0 = theta1 = 0.0
+
+    for _ in range(epochs):
+        # accumulate both gradients BEFORE touching either parameter
+        g0 = g1 = 0.0
+        for x, y in zip(xs, ys):
+            residual = theta0 + theta1 * x - y
+            g0 += residual
+            g1 += residual * x
+        g0 *= 2 / n
+        g1 *= 2 / n
+
+        theta0 -= alpha * g0
+        theta1 -= alpha * g1
+
+    return theta0, theta1
+
+
+def cost(xs, ys, theta0, theta1):
+    n = len(xs)
+    return sum((theta0 + theta1 * x - y) ** 2 for x, y in zip(xs, ys)) / n
+
+
+if __name__ == "__main__":
+    xs = [1, 2, 3]
+    ys = [2, 3, 5]
+    t0, t1 = gradient_descent(xs, ys)
+    print(f"theta0 = {t0:.4f}  theta1 = {t1:.4f}")   # 0.3333  1.5000
+    print(f"cost   = {cost(xs, ys, t0, t1):.6f}")     # 0.055556</code></pre>
+</div>
+
+<p>In practice nobody hand-rolls this. <code>sklearn.linear_model.LinearRegression</code> solves the normal equations directly, which is exact and needs no learning rate:</p>
+
+<div class="codeblock">
+  <div class="codeblock-header"><span class="lang">Python</span><span class="file">with scikit-learn</span><button class="copy-btn">Copy</button></div>
+<pre><code class="language-python">from sklearn.linear_model import LinearRegression
+
+X = [[1], [2], [3]]          # must be 2-D: one column per feature
+y = [2, 3, 5]
+
+model = LinearRegression().fit(X, y)
+print(model.intercept_, model.coef_)   # 0.3333... [1.5]</code></pre>
+</div>
+
+<h2 id="pitfalls">Three practical notes</h2>
+
+<ol>
+<li><strong>Feature scaling.</strong> If one feature ranges over thousands and another over single digits, the cost surface becomes a long thin valley and gradient descent zig-zags. Standardising features fixes it.</li>
+<li><strong>Batch versus stochastic.</strong> Batch gradient descent uses all \(n\) examples per step — accurate but slow. Stochastic uses one example per step — noisy but fast. Mini-batch is the compromise everyone actually uses.</li>
+<li><strong>Closed form versus iterative.</strong> For linear regression the exact solution exists: \(\theta = (X^\top X)^{-1}X^\top y\). Gradient descent is used because the same machinery extends to models where no closed form exists, such as logistic regression and neural networks.</li>
+</ol>
+
+<h2 id="check">Check your understanding</h2>
+
+<div class="quiz">
+  <div class="qtext">Gradient descent with too large a learning rate typically causes what?</div>
+  <div class="opts">
+    <button class="opt">Slower but stable convergence</button>
+    <button class="opt" data-correct>The cost to oscillate or diverge, growing each step</button>
+    <button class="opt">The model to underfit permanently</button>
+    <button class="opt">Nothing — the rate only affects speed</button>
+  </div>
+  <div class="fb">Each step moves distance α times the gradient. If α is large enough that a step overshoots the minimum and lands higher on the opposite side, the next gradient is larger still, so the following step overshoots further. The cost grows without bound rather than settling.</div>
+</div>
+
+<div class="quiz">
+  <div class="qtext">Why is squared error preferred to absolute error for the cost function here?</div>
+  <div class="opts">
+    <button class="opt">It is always a better measure of accuracy</button>
+    <button class="opt" data-correct>It is differentiable everywhere, so the gradient exists at every point</button>
+    <button class="opt">It is less sensitive to outliers</button>
+    <button class="opt">It produces smaller numbers</button>
+  </div>
+  <div class="fb">Absolute error has a kink at zero, where the derivative is undefined, so gradient descent has no direction to step in there. Squared error is smooth everywhere. Note the third option is exactly backwards — squaring makes the cost <em>more</em> sensitive to outliers, which is why MAE exists as an alternative.</div>
+</div>
+<nav class="pager" aria-label="Chapter navigation">
+<a href="../topics/01-framework.html"><span class="dir">← Previous</span><span class="ttl">01 · The Machine-Learning Framework</span></a>
+<a class="next" href="../topics/03-regression-metrics.html"><span class="dir">Next →</span><span class="ttl">03 · Regression Metrics</span></a>
+</nav>
+<footer style="margin-top:56px;padding-top:22px;border-top:1px solid var(--rule);font-size:13px;color:var(--ink-3)">
+  <p style="margin:0 0 6px"><strong style="color:var(--ink-2)">Machine Learning</strong> — an interactive textbook built from the class notes of 27 Aug – 26 Oct 2026, with Alpaydin and Géron as references.</p>
+  <p style="margin:0">Progress is saved in this browser only. <a href="../glossary.html">Glossary</a> · <a href="../practice.html">Practice</a> · <a href="../visualizers.html">Visualizers</a></p>
+</footer>
+</main>
+</div>
+<script>window.ML_SEARCH = [{"title": "01 · The Machine-Learning Framework", "topic": "Chapter", "url": "topics/01-framework.html", "keywords": "machine learning, supervised, unsupervised, reinforcement, train test split, workflow What it means to learn from data, and how the whole subject divides."}, {"title": "02 · Linear Regression and Gradient Descent", "topic": "Chapter", "url": "topics/02-linear-regression.html", "keywords": "linear regression, hypothesis, cost function, gradient descent, learning rate, MSE Fitting a line by minimising squared error, and how gradient descent finds the minimum."}, {"title": "03 · Regression Metrics", "topic": "Chapter", "url": "topics/03-regression-metrics.html", "keywords": "MSE, MAE, RMSE, R squared, coefficient of determination, SSres, SStot MSE, MAE, RMSE and R-squared: what each one rewards and punishes."}, {"title": "04 · Bias, Variance and Regularisation", "topic": "Chapter", "url": "topics/04-bias-variance.html", "keywords": "bias, variance, underfitting, overfitting, regularisation, Lasso, Ridge, Elastic Net, L1, L2 Why a model that fits the training data perfectly can be worse than one that does not."}, {"title": "05 · Logistic Regression", "topic": "Chapter", "url": "topics/05-logistic-regression.html", "keywords": "logistic regression, sigmoid, log odds, decision boundary, log loss, cross entropy Turning a linear model into a classifier with the sigmoid and log-loss."}, {"title": "06 · Naive Bayes", "topic": "Chapter", "url": "topics/06-naive-bayes.html", "keywords": "naive bayes, Bayes theorem, prior, likelihood, posterior, evidence, Laplace smoothing Classification by Bayes theorem under a deliberately naive independence assumption."}, {"title": "07 · Decision Trees", "topic": "Chapter", "url": "topics/07-decision-trees.html", "keywords": "decision tree, entropy, information gain, Gini impurity, ID3, pruning Splitting the feature space by whichever question reduces impurity the most."}, {"title": "08 · K-Nearest Neighbours", "topic": "Chapter", "url": "topics/08-knn.html", "keywords": "KNN, k nearest neighbours, Euclidean distance, majority vote, lazy learner, curse of dimensionality The laziest classifier there is: look at the neighbours and take a vote."}, {"title": "09 · Classification Metrics", "topic": "Chapter", "url": "topics/09-classification-metrics.html", "keywords": "confusion matrix, accuracy, precision, recall, F1, sensitivity, specificity The confusion matrix, and why accuracy alone can be dangerously misleading."}, {"title": "10 · Support Vector Machines", "topic": "Chapter", "url": "topics/10-svm.html", "keywords": "SVM, support vector machine, hyperplane, margin, hard margin, soft margin, dual, kernel Finding the widest street between two classes, and the kernel trick for when a line will not do."}, {"title": "11 · k-Means Clustering", "topic": "Chapter", "url": "topics/11-kmeans.html", "keywords": "k-means, clustering, centroid, Lloyd, SSE, elbow method, unsupervised Partitioning points into k groups by alternating assignment and centroid updates."}, {"title": "12 · DBSCAN", "topic": "Chapter", "url": "topics/12-dbscan.html", "keywords": "DBSCAN, density, eps, minPts, core point, border point, noise, clustering Density-based clustering: find dense regions and label the rest as noise."}, {"title": "13 · OPTICS", "topic": "Chapter", "url": "topics/13-optics.html", "keywords": "OPTICS, reachability, core distance, ordering, density, clustering, variable density Ordering points by reachability so clusters of different densities all show up."}, {"title": "14 · Hierarchical Clustering", "topic": "Chapter", "url": "topics/14-hierarchical.html", "keywords": "hierarchical, agglomerative, divisive, dendrogram, linkage, single, complete, average, ward Building a nested tree of clusters bottom-up or top-down, and reading it as a dendrogram."}, {"title": "Interactive Visualizers", "topic": "Tool", "url": "visualizers.html", "keywords": "Gradient descent, k-means, the metrics calculator and an entropy explorer."}, {"title": "Practice and Examination Questions", "topic": "Tool", "url": "practice.html", "keywords": "Graded questions with full worked solutions."}, {"title": "Glossary", "topic": "Tool", "url": "glossary.html", "keywords": "Every term used in the course, defined in one line."}, {"title": "What it means to learn from data", "topic": "Ch 01", "url": "topics/01-framework.html#what", "keywords": "What it means to learn from data"}, {"title": "The three learning types", "topic": "Ch 01", "url": "topics/01-framework.html#types", "keywords": "The three learning types"}, {"title": "The anatomy of a learning problem", "topic": "Ch 01", "url": "topics/01-framework.html#anatomy", "keywords": "The anatomy of a learning problem"}, {"title": "The workflow, and where it goes wrong", "topic": "Ch 01", "url": "topics/01-framework.html#workflow", "keywords": "The workflow, and where it goes wrong"}, {"title": "Check your understanding", "topic": "Ch 01", "url": "topics/01-framework.html#check", "keywords": "Check your understanding"}, {"title": "The hypothesis", "topic": "Ch 02", "url": "topics/02-linear-regression.html#hypothesis", "keywords": "The hypothesis"}, {"title": "The cost function", "topic": "Ch 02", "url": "topics/02-linear-regression.html#cost", "keywords": "The cost function"}, {"title": "The gradient", "topic": "Ch 02", "url": "topics/02-linear-regression.html#gradient", "keywords": "The gradient"}, {"title": "The update rule", "topic": "Ch 02", "url": "topics/02-linear-regression.html#gd", "keywords": "The update rule"}, {"title": "Implementation", "topic": "Ch 02", "url": "topics/02-linear-regression.html#python", "keywords": "Implementation"}, {"title": "Three practical notes", "topic": "Ch 02", "url": "topics/02-linear-regression.html#pitfalls", "keywords": "Three practical notes"}, {"title": "Check your understanding", "topic": "Ch 02", "url": "topics/02-linear-regression.html#check", "keywords": "Check your understanding"}, {"title": "Why one number is not enough", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#why", "keywords": "Why one number is not enough"}, {"title": "Mean squared error", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#mse", "keywords": "Mean squared error"}, {"title": "Mean absolute error", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#mae", "keywords": "Mean absolute error"}, {"title": "Root mean squared error", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#rmse", "keywords": "Root mean squared error"}, {"title": "Coefficient of determination", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#r2", "keywords": "Coefficient of determination"}, {"title": "Check your understanding", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#check", "keywords": "Check your understanding"}, {"title": "Bias and variance defined", "topic": "Ch 04", "url": "topics/04-bias-variance.html#defs", "keywords": "Bias and variance defined"}, {"title": "Underfitting and overfitting", "topic": "Ch 04", "url": "topics/04-bias-variance.html#underover", "keywords": "Underfitting and overfitting"}, {"title": "Regularisation", "topic": "Ch 04", "url": "topics/04-bias-variance.html#reg", "keywords": "Regularisation"}, {"title": "Check your understanding", "topic": "Ch 04", "url": "topics/04-bias-variance.html#check", "keywords": "Check your understanding"}, {"title": "Why linear regression cannot be reused", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#why", "keywords": "Why linear regression cannot be reused"}, {"title": "The sigmoid", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#sigmoid", "keywords": "The sigmoid"}, {"title": "Odds and log-odds", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#odds", "keywords": "Odds and log-odds"}, {"title": "The decision boundary", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#boundary", "keywords": "The decision boundary"}, {"title": "The cost function, and why not squared error", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#cost", "keywords": "The cost function, and why not squared error"}, {"title": "The gradient", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#gradient", "keywords": "The gradient"}, {"title": "More than two classes", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#multiclass", "keywords": "More than two classes"}, {"title": "Check your understanding", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#check", "keywords": "Check your understanding"}, {"title": "Classification by probability", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#idea", "keywords": "Classification by probability"}, {"title": "The naive assumption", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#assumption", "keywords": "The naive assumption"}, {"title": "Worked example — the Play Tennis dataset", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#worked", "keywords": "Worked example — the Play Tennis dataset"}, {"title": "The zero-frequency problem", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#zero", "keywords": "The zero-frequency problem"}, {"title": "Continuous features", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#continuous", "keywords": "Continuous features"}, {"title": "Implementation", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#code", "keywords": "Implementation"}, {"title": "Check your understanding", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#check", "keywords": "Check your understanding"}, {"title": "Splitting the feature space", "topic": "Ch 07", "url": "topics/07-decision-trees.html#idea", "keywords": "Splitting the feature space"}, {"title": "Entropy", "topic": "Ch 07", "url": "topics/07-decision-trees.html#entropy", "keywords": "Entropy"}, {"title": "Information gain", "topic": "Ch 07", "url": "topics/07-decision-trees.html#ig", "keywords": "Information gain"}, {"title": "Worked example — the Tennis root node", "topic": "Ch 07", "url": "topics/07-decision-trees.html#worked", "keywords": "Worked example — the Tennis root node"}, {"title": "Gini impurity", "topic": "Ch 07", "url": "topics/07-decision-trees.html#gini", "keywords": "Gini impurity"}, {"title": "Pruning", "topic": "Ch 07", "url": "topics/07-decision-trees.html#pruning", "keywords": "Pruning"}, {"title": "Check your understanding", "topic": "Ch 07", "url": "topics/07-decision-trees.html#check", "keywords": "Check your understanding"}, {"title": "The laziest classifier", "topic": "Ch 08", "url": "topics/08-knn.html#idea", "keywords": "The laziest classifier"}, {"title": "The distance metric", "topic": "Ch 08", "url": "topics/08-knn.html#distance", "keywords": "The distance metric"}, {"title": "Worked example", "topic": "Ch 08", "url": "topics/08-knn.html#worked", "keywords": "Worked example"}, {"title": "Choosing k", "topic": "Ch 08", "url": "topics/08-knn.html#k", "keywords": "Choosing k"}, {"title": "Implementation", "topic": "Ch 08", "url": "topics/08-knn.html#code", "keywords": "Implementation"}, {"title": "Check your understanding", "topic": "Ch 08", "url": "topics/08-knn.html#check", "keywords": "Check your understanding"}, {"title": "The confusion matrix", "topic": "Ch 09", "url": "topics/09-classification-metrics.html#cm", "keywords": "The confusion matrix"}, {"title": "The four metrics", "topic": "Ch 09", "url": "topics/09-classification-metrics.html#metrics", "keywords": "The four metrics"}, {"title": "Worked example", "topic": "Ch 09", "url": "topics/09-classification-metrics.html#worked", "keywords": "Worked example"}, {"title": "Why accuracy alone is not enough", "topic": "Ch 09", "url": "topics/09-classification-metrics.html#accuracy", "keywords": "Why accuracy alone is not enough"}, {"title": "Check your understanding", "topic": "Ch 09", "url": "topics/09-classification-metrics.html#check", "keywords": "Check your understanding"}, {"title": "The widest street", "topic": "Ch 10", "url": "topics/10-svm.html#idea", "keywords": "The widest street"}, {"title": "The equation of a hyperplane", "topic": "Ch 10", "url": "topics/10-svm.html#equation", "keywords": "The equation of a hyperplane"}, {"title": "Maximising the margin", "topic": "Ch 10", "url": "topics/10-svm.html#margin", "keywords": "Maximising the margin"}, {"title": "The hard-margin objective", "topic": "Ch 10", "url": "topics/10-svm.html#hard", "keywords": "The hard-margin objective"}, {"title": "The dual formulation", "topic": "Ch 10", "url": "topics/10-svm.html#dual", "keywords": "The dual formulation"}, {"title": "The soft margin", "topic": "Ch 10", "url": "topics/10-svm.html#soft", "keywords": "The soft margin"}, {"title": "The kernel trick", "topic": "Ch 10", "url": "topics/10-svm.html#kernel", "keywords": "The kernel trick"}, {"title": "Check your understanding", "topic": "Ch 10", "url": "topics/10-svm.html#check", "keywords": "Check your understanding"}, {"title": "The problem k-means solves", "topic": "Ch 11", "url": "topics/11-kmeans.html#problem", "keywords": "The problem k-means solves"}, {"title": "The algorithm, step by step", "topic": "Ch 11", "url": "topics/11-kmeans.html#algorithm", "keywords": "The algorithm, step by step"}, {"title": "Solved example 1 — two dimensions, k = 2", "topic": "Ch 11", "url": "topics/11-kmeans.html#ex1", "keywords": "Solved example 1 — two dimensions, k = 2"}, {"title": "Solved example 2 — one dimension, k = 2", "topic": "Ch 11", "url": "topics/11-kmeans.html#ex2", "keywords": "Solved example 2 — one dimension, k = 2"}, {"title": "Choosing k", "topic": "Ch 11", "url": "topics/11-kmeans.html#choosing-k", "keywords": "Choosing k"}, {"title": "The five challenges of k-means", "topic": "Ch 11", "url": "topics/11-kmeans.html#challenges", "keywords": "The five challenges of k-means"}, {"title": "Implementation", "topic": "Ch 11", "url": "topics/11-kmeans.html#code", "keywords": "Implementation"}, {"title": "Check your understanding", "topic": "Ch 11", "url": "topics/11-kmeans.html#check", "keywords": "Check your understanding"}, {"title": "Clustering by density", "topic": "Ch 12", "url": "topics/12-dbscan.html#idea", "keywords": "Clustering by density"}, {"title": "The definitions", "topic": "Ch 12", "url": "topics/12-dbscan.html#definitions", "keywords": "The definitions"}, {"title": "The algorithm, step by step", "topic": "Ch 12", "url": "topics/12-dbscan.html#algorithm", "keywords": "The algorithm, step by step"}, {"title": "Solved example 1 — eps = 1.5, MinPts = 3", "topic": "Ch 12", "url": "topics/12-dbscan.html#ex1", "keywords": "Solved example 1 — eps = 1.5, MinPts = 3"}, {"title": "Solved example 2 — the same points with eps = 0.9", "topic": "Ch 12", "url": "topics/12-dbscan.html#ex2", "keywords": "Solved example 2 — the same points with eps = 0.9"}, {"title": "Choosing eps and MinPts", "topic": "Ch 12", "url": "topics/12-dbscan.html#params", "keywords": "Choosing eps and MinPts"}, {"title": "Strengths and weaknesses", "topic": "Ch 12", "url": "topics/12-dbscan.html#compare", "keywords": "Strengths and weaknesses"}, {"title": "Implementation", "topic": "Ch 12", "url": "topics/12-dbscan.html#code", "keywords": "Implementation"}, {"title": "Check your understanding", "topic": "Ch 12", "url": "topics/12-dbscan.html#check", "keywords": "Check your understanding"}, {"title": "The problem with a global eps", "topic": "Ch 13", "url": "topics/13-optics.html#why", "keywords": "The problem with a global eps"}, {"title": "The two new quantities", "topic": "Ch 13", "url": "topics/13-optics.html#definitions", "keywords": "The two new quantities"}, {"title": "The algorithm, step by step", "topic": "Ch 13", "url": "topics/13-optics.html#algorithm", "keywords": "The algorithm, step by step"}, {"title": "Solved example 1 — a full ordering, computed by hand", "topic": "Ch 13", "url": "topics/13-optics.html#ex1", "keywords": "Solved example 1 — a full ordering, computed by hand"}, {"title": "Solved example 2 — two clusters of very different density", "topic": "Ch 13", "url": "topics/13-optics.html#ex2", "keywords": "Solved example 2 — two clusters of very different density"}, {"title": "Extracting clusters from the ordering", "topic": "Ch 13", "url": "topics/13-optics.html#extract", "keywords": "Extracting clusters from the ordering"}, {"title": "DBSCAN versus OPTICS", "topic": "Ch 13", "url": "topics/13-optics.html#compare", "keywords": "DBSCAN versus OPTICS"}, {"title": "Implementation", "topic": "Ch 13", "url": "topics/13-optics.html#code", "keywords": "Implementation"}, {"title": "Check your understanding", "topic": "Ch 13", "url": "topics/13-optics.html#check", "keywords": "Check your understanding"}, {"title": "A tree instead of a partition", "topic": "Ch 14", "url": "topics/14-hierarchical.html#idea", "keywords": "A tree instead of a partition"}, {"title": "Linkage — how to measure distance between clusters", "topic": "Ch 14", "url": "topics/14-hierarchical.html#linkage", "keywords": "Linkage — how to measure distance between clusters"}, {"title": "Solved example 1 — single linkage", "topic": "Ch 14", "url": "topics/14-hierarchical.html#ex1", "keywords": "Solved example 1 — single linkage"}, {"title": "Solved example 2 — the same points with complete linkage", "topic": "Ch 14", "url": "topics/14-hierarchical.html#ex2", "keywords": "Solved example 2 — the same points with complete linkage"}, {"title": "Reading a dendrogram", "topic": "Ch 14", "url": "topics/14-hierarchical.html#dendrogram", "keywords": "Reading a dendrogram"}, {"title": "Compared with the other methods", "topic": "Ch 14", "url": "topics/14-hierarchical.html#compare", "keywords": "Compared with the other methods"}, {"title": "Check your understanding", "topic": "Ch 14", "url": "topics/14-hierarchical.html#check", "keywords": "Check your understanding"}];</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
