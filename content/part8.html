@@ -1,0 +1,206 @@
+<!--TOPIC:practice|Practice and Examination Questions|-->
+<p>Grouped by module and graded. Open the solution only after attempting on paper. <span class="pill">recall</span> tests definitions, <span class="pill">applied</span> tests execution, <span class="pill supp">exam-hard</span> tests reasoning.</p>
+
+<h2 id="p1">Module 1 — Foundations</h2>
+
+<details>
+<summary><span class="pill">recall</span> Classify each task as regression, classification or clustering: (a) predicting tomorrow's temperature, (b) grouping news articles by topic, (c) deciding whether a transaction is fraudulent, (d) estimating a house's price.</summary>
+<div class="details-body">
+<p>(a) <strong>Regression</strong> — the output is a continuous number.<br>
+(b) <strong>Clustering</strong> — unsupervised, no labels, groups emerge from the data.<br>
+(c) <strong>Classification</strong> — the output is a discrete label, and the labels exist in training data.<br>
+(d) <strong>Regression</strong>.</p>
+<p>The test is always the same two questions: are there labels, and is the label continuous or categorical?</p>
+</div>
+</details>
+
+<h2 id="p2">Module 2 — Regression</h2>
+
+<details>
+<summary><span class="pill">applied</span> For the data (1,2), (2,4), (3,6), compute the least-squares line and R².</summary>
+<div class="details-body">
+<p>The points lie exactly on \(y = 2x\), so the fit is \(\theta_1 = 2\), \(\theta_0 = 0\).</p>
+<p>Check: \(SS_{res} = 0\), so \(R^2 = 1 - 0/SS_{tot} = 1\).</p>
+<p>\(SS_{tot} = (2-4)^2 + (4-4)^2 + (6-4)^2 = 4 + 0 + 4 = 8\), confirming the model explains all of it.</p>
+<p>A perfect fit is a warning sign in practice — real data has noise, and \(R^2 = 1\) usually means a feature leaked the target.</p>
+</div>
+</details>
+
+<details>
+<summary><span class="pill supp">exam-hard</span> A model has training MSE 0.02 and test MSE 0.85. Diagnose it and give three remedies.</summary>
+<div class="details-body">
+<p><strong>Overfitting.</strong> The gap between training and test error is large — the model has learned the training noise rather than the signal. Its variance is high.</p>
+<p>Remedies: (1) more training data, which dilutes the noise; (2) a simpler model — fewer features, lower polynomial degree, shallower tree; (3) regularisation, adding an L1 or L2 penalty to shrink the coefficients. All three reduce variance at the cost of a little bias.</p>
+</div>
+</details>
+
+<h2 id="p3">Module 3 — Classification</h2>
+
+<details>
+<summary><span class="pill">applied</span> A naive Bayes model has P(Yes) = 0.6, P(No) = 0.4. For a query, the likelihood products are 0.0021 (Yes) and 0.0093 (No). Predict the class and give the normalised probability.</summary>
+<div class="details-body">
+<p>Scores: Yes \(= 0.6 \times 0.0021 = 0.00126\); No \(= 0.4 \times 0.0093 = 0.00372\).</p>
+<p>No is larger, so predict <strong>No</strong>.</p>
+<p>Normalised: \(P(\text{No}) = 0.00372/(0.00126 + 0.00372) = 0.747\), \(P(\text{Yes}) = 0.253\).</p>
+<p>Note the prior favoured Yes, but the likelihood was strong enough to override it — that is Bayes' theorem doing its job.</p>
+</div>
+</details>
+
+<details>
+<summary><span class="pill">applied</span> A dataset has 8 positives and 4 negatives. Compute the entropy and the information gain of a split into two branches with (6 positive, 1 negative) and (2 positive, 3 negative).</summary>
+<div class="details-body">
+<p><strong>Parent:</strong> \(H = -\frac{8}{12}\log_2\frac{8}{12} - \frac{4}{12}\log_2\frac{4}{12} = 0.9183\)</p>
+<p><strong>Branch 1</strong> (7 rows): \(H = -\frac{6}{7}\log_2\frac{6}{7} - \frac{1}{7}\log_2\frac{1}{7} = 0.5917\)</p>
+<p><strong>Branch 2</strong> (5 rows): \(H = -\frac{2}{5}\log_2\frac{2}{5} - \frac{3}{5}\log_2\frac{3}{5} = 0.9710\)</p>
+<p><strong>Weighted:</strong> \(\frac{7}{12}(0.5917) + \frac{5}{12}(0.9710) = 0.3452 + 0.4046 = 0.7498\)</p>
+<p><strong>IG</strong> \(= 0.9183 - 0.7498 = 0.1685\)</p>
+</div>
+</details>
+
+<details>
+<summary><span class="pill supp">exam-hard</span> Why can a decision tree achieve zero training error yet perform badly on test data, and what stops it?</summary>
+<div class="details-body">
+<p>An unconstrained tree keeps splitting until every leaf is pure. If it can always find a split that separates one more row, it will eventually isolate every training point in its own leaf — memorising the data, including its noise. Training error goes to zero and generalisation collapses.</p>
+<p>Pruning stops it: pre-pruning limits depth or requires a minimum number of samples per leaf, and refuses splits whose gain is negligible; post-pruning grows the full tree then removes branches that do not improve validation accuracy.</p>
+</div>
+</details>
+
+<details>
+<summary><span class="pill supp">exam-hard</span> In an SVM, explain the effect of making C very large, then very small.</summary>
+<div class="details-body">
+<p><strong>Large C</strong> — violations of the margin are penalised heavily, so the optimiser accepts almost none. The margin becomes narrow and hugs the data, fitting outliers. Low bias, high variance: overfitting.</p>
+<p><strong>Small C</strong> — violations are cheap, so the model tolerates points inside the margin to keep the street wide. High bias, low variance: underfitting.</p>
+<p>C is therefore the regularisation dial for an SVM, playing the role that λ plays in Ridge and Lasso.</p>
+</div>
+</details>
+
+<h2 id="p4">Module 4 — Clustering</h2>
+
+<details>
+<summary><span class="pill">applied</span> Run one full k-means iteration on points 1, 2, 6, 7 with k = 2 and initial centroids 1 and 2. Give the new centroids and the SSE.</summary>
+<div class="details-body">
+<p><strong>Assignment:</strong> 1 → c₁ (0 vs 1); 2 → c₂ (1 vs 0); 6 → c₂ (5 vs 4); 7 → c₂ (6 vs 5).</p>
+<p>Clusters: {1} and {2, 6, 7}.</p>
+<p><strong>Update:</strong> \(c_1 = 1\); \(c_2 = (2+6+7)/3 = 5\).</p>
+<p><strong>SSE</strong> \(= 0 + (2-5)^2 + (6-5)^2 + (7-5)^2 = 0 + 9 + 1 + 4 = 14\).</p>
+<p>The initialisation was poor — both centroids landed in the same natural group — which is exactly why k-means++ and multiple restarts exist.</p>
+</div>
+</details>
+
+<details>
+<summary><span class="pill">applied</span> With eps = 2 and MinPts = 3, classify the points 0, 1, 2, 3, 10 on a line as core, border or noise.</summary>
+<div class="details-body">
+<p>Neighbourhoods within eps = 2 (including the point itself):</p>
+<ul>
+<li><strong>0</strong>: {0, 1, 2} → 3 → <strong>core</strong></li>
+<li><strong>1</strong>: {0, 1, 2, 3} → 4 → <strong>core</strong></li>
+<li><strong>2</strong>: {0, 1, 2, 3} → 4 → <strong>core</strong></li>
+<li><strong>3</strong>: {1, 2, 3} → 3 → <strong>core</strong></li>
+<li><strong>10</strong>: {10} → 1 → <strong>noise</strong></li>
+</ul>
+<p>All four of 0–3 are core, so they form one cluster; 10 is noise. Note that a border point appears only when a point has too few neighbours of its own but sits inside a core point's neighbourhood — that did not happen here.</p>
+</div>
+</details>
+
+<details>
+<summary><span class="pill supp">exam-hard</span> Explain precisely why DBSCAN fails on a dataset with two clusters of very different density, and how OPTICS avoids it.</summary>
+<div class="details-body">
+<p>DBSCAN has one global ε. If ε is set to suit the dense cluster, the sparse cluster's points have fewer than MinPts neighbours within ε and are labelled noise. If ε is set to suit the sparse cluster, the dense clusters merge into one, because points between them are within ε of both.</p>
+<p>OPTICS does not decide. It computes, for every point, a core distance and then orders the points by reachability distance — the maximum of the predecessor's core distance and the pair distance. Because reachability is floored by the core distance, dense regions produce low values and sparse regions produce high ones, regardless of the absolute distances. The output is a reachability plot whose valleys are clusters at every density simultaneously; you choose the cut afterwards, or use the steepness method to find valleys of any depth automatically.</p>
+</div>
+</details>
+
+<details>
+<summary><span class="pill supp">exam-hard</span> Agglomerative clustering with single linkage and with complete linkage give different dendrograms on the same data. Explain why, and name the failure mode of each.</summary>
+<div class="details-body">
+<p>Single linkage measures cluster distance as the <em>minimum</em> over cross pairs, so a cluster can absorb a new point that is close to just one member. Complete linkage uses the <em>maximum</em>, requiring the new point to be reasonably close to every member.</p>
+<p><strong>Single linkage failure — chaining:</strong> a chain of intermediate points links two genuinely separate clusters into one, because each consecutive pair is close even though the ends are far apart.</p>
+<p><strong>Complete linkage failure — splitting:</strong> a single outlier forces a large maximum distance, so compact groups are kept apart longer than they should be, and elongated clusters are broken up.</p>
+</div>
+</details>
+
+<!--TOPIC:glossary|Glossary|-->
+<p>Every term used in the course, in one line, grouped by module.</p>
+
+<h2 id="g1">Foundations and regression</h2>
+<dl class="glossary">
+<dt>Bias</dt><dd>Error from wrong assumptions in the model; the gap between average prediction and truth.</dd>
+<dt>Cost function</dt><dd>The loss averaged over the training set; what training minimises.</dd>
+<dt>Elastic Net</dt><dd>Regularisation combining the L1 and L2 penalties.</dd>
+<dt>Feature</dt><dd>A measured input variable; one column of the data table.</dd>
+<dt>Gradient descent</dt><dd>Iteratively stepping against the gradient of the cost to reach a minimum.</dd>
+<dt>Hyperparameter</dt><dd>A setting chosen before training (learning rate, k, λ, C) rather than learned.</dd>
+<dt>Inductive bias</dt><dd>The set of functions a model can represent — what it can never learn.</dd>
+<dt>Label</dt><dd>The target answer for one training row.</dd>
+<dt>Lasso (L1)</dt><dd>Regularisation penalising the sum of absolute coefficients; drives some to exactly zero.</dd>
+<dt>Learning rate (α)</dt><dd>Step size in gradient descent. Too small is slow, too large diverges.</dd>
+<dt>Linear regression</dt><dd>Fitting a linear function by minimising mean squared error.</dd>
+<dt>MAE</dt><dd>Mean absolute error; same units as the target, robust to outliers.</dd>
+<dt>MSE</dt><dd>Mean squared error; penalises large errors heavily.</dd>
+<dt>Overfitting</dt><dd>Low training error, high test error — the model has memorised noise.</dd>
+<dt>R²</dt><dd>Proportion of variance explained relative to predicting the mean. Range \((-\infty, 1]\).</dd>
+<dt>Regularisation</dt><dd>Adding a penalty on coefficient size to reduce variance.</dd>
+<dt>Ridge (L2)</dt><dd>Regularisation penalising the sum of squared coefficients; shrinks smoothly, never to zero.</dd>
+<dt>RMSE</dt><dd>Square root of MSE; same units as the target.</dd>
+<dt>Underfitting</dt><dd>High training and test error — the model is too simple.</dd>
+<dt>Variance</dt><dd>Error from sensitivity to the particular training sample.</dd>
+</dl>
+
+<h2 id="g2">Classification</h2>
+<dl class="glossary">
+<dt>Accuracy</dt><dd>(TP + TN) / total. Misleading on imbalanced data.</dd>
+<dt>Confusion matrix</dt><dd>The 2×2 table of TP, FP, FN, TN.</dd>
+<dt>Decision boundary</dt><dd>The surface separating predicted classes.</dd>
+<dt>Decision tree</dt><dd>A model that splits the feature space by a sequence of tests.</dd>
+<dt>Entropy</dt><dd>Impurity measure, \(-\sum p_i\log_2 p_i\). Zero for a pure node, 1 for a 50/50 binary split.</dd>
+<dt>F1 score</dt><dd>Harmonic mean of precision and recall.</dd>
+<dt>Gini impurity</dt><dd>\(1-\sum p_i^2\); an impurity measure cheaper than entropy.</dd>
+<dt>Hyperplane</dt><dd>A flat decision surface: a point in 1-D, a line in 2-D, a plane in 3-D.</dd>
+<dt>Information gain</dt><dd>Entropy before a split minus the weighted entropy after it.</dd>
+<dt>Kernel trick</dt><dd>Computing inner products in a higher-dimensional space without forming the coordinates.</dd>
+<dt>KNN</dt><dd>k-nearest neighbours; a lazy learner that classifies by a vote among the k closest training points.</dd>
+<dt>Laplace smoothing</dt><dd>Adding a small count to every cell so no likelihood is exactly zero.</dd>
+<dt>Lazy learner</dt><dd>A model that does no work at training time and all of it at prediction time.</dd>
+<dt>Log-loss</dt><dd>Binary cross-entropy; the standard cost for probabilistic classifiers.</dd>
+<dt>Margin</dt><dd>Distance from the decision boundary to the nearest training point.</dd>
+<dt>Naive Bayes</dt><dd>A classifier applying Bayes' theorem with a conditional-independence assumption between features.</dd>
+<dt>Posterior</dt><dd>Probability of a class given the features — what we want.</dd>
+<dt>Precision</dt><dd>TP / (TP + FP) — of what I flagged, how much was right.</dd>
+<dt>Prior</dt><dd>Class frequency before seeing any features.</dd>
+<dt>Recall</dt><dd>TP / (TP + FN) — of what was positive, how much I caught.</dd>
+<dt>Sigmoid</dt><dd>\(\sigma(z) = 1/(1+e^{-z})\); squashes a real number into (0,1).</dd>
+<dt>Soft margin</dt><dd>An SVM that tolerates margin violations at a cost set by C.</dd>
+<dt>Softmax</dt><dd>Generalisation of the sigmoid to more than two classes.</dd>
+<dt>Support vector</dt><dd>A training point on or inside the margin; these alone determine the boundary.</dd>
+<dt>SVM</dt><dd>Support vector machine; maximises the margin between two classes.</dd>
+</dl>
+
+<h2 id="g3">Clustering</h2>
+<dl class="glossary">
+<dt>Agglomerative</dt><dd>Bottom-up hierarchical clustering: start with singletons and merge.</dd>
+<dt>Border point</dt><dd>In DBSCAN, a non-core point inside the neighbourhood of a core point.</dd>
+<dt>Centroid</dt><dd>The mean of the points in a cluster.</dd>
+<dt>Chaining</dt><dd>Single linkage joining clusters through a chain of intermediate points.</dd>
+<dt>Complete linkage</dt><dd>Cluster distance = maximum over cross pairs.</dd>
+<dt>Core distance</dt><dd>In OPTICS, the distance from a point to its MinPts-th nearest neighbour.</dd>
+<dt>Core point</dt><dd>In DBSCAN, a point with at least MinPts neighbours within eps.</dd>
+<dt>DBSCAN</dt><dd>Density-based clustering using a global eps and MinPts; labels noise explicitly.</dd>
+<dt>Dendrogram</dt><dd>The tree diagram produced by hierarchical clustering, with merge height on the vertical axis.</dd>
+<dt>Density-reachable</dt><dd>Reachable through a chain of core points.</dd>
+<dt>Divisive</dt><dd>Top-down hierarchical clustering: start with everything and split.</dd>
+<dt>Elbow method</dt><dd>Plotting SSE against k and looking for the point where it flattens.</dd>
+<dt>eps (ε)</dt><dd>The neighbourhood radius in DBSCAN and OPTICS.</dd>
+<dt>Hierarchical clustering</dt><dd>Producing a nested sequence of clusterings rather than a single partition.</dd>
+<dt>k-means</dt><dd>Partitioning into k clusters by alternating assignment and centroid updates.</dd>
+<dt>k-means++</dt><dd>Seeding that spreads initial centroids apart, reducing bad local optima.</dd>
+<dt>Linkage</dt><dd>How distance between two clusters is defined: single, complete, average or Ward.</dd>
+<dt>MinPts</dt><dd>The minimum neighbourhood size for a point to count as dense.</dd>
+<dt>Noise point</dt><dd>Neither core nor border; belongs to no cluster.</dd>
+<dt>OPTICS</dt><dd>Orders points by reachability so clusters of any density can be extracted.</dd>
+<dt>Reachability distance</dt><dd>In OPTICS, the max of the predecessor's core distance and the pair distance.</dd>
+<dt>Reachability plot</dt><dd>The OPTICS output plotted in ordering order; valleys are clusters.</dd>
+<dt>Silhouette</dt><dd>A per-point score comparing cohesion within a cluster against separation from the next nearest.</dd>
+<dt>Single linkage</dt><dd>Cluster distance = minimum over cross pairs; prone to chaining.</dd>
+<dt>SSE / inertia</dt><dd>Sum of squared distances from each point to its centroid; the k-means objective.</dd>
+<dt>Ward linkage</dt><dd>Merging whichever pair increases within-cluster variance least.</dd>
+</dl>
