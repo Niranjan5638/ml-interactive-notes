@@ -1,0 +1,253 @@
+<!--TOPIC:03-regression-metrics|Regression Metrics|-->
+<h2 id="why">Why one number is not enough</h2>
+
+<p>A regression model makes a real number for every input, so it is almost never exactly right. The metrics below all summarise the residuals — but they summarise different things, and choosing the wrong one lets a bad model look good.</p>
+
+<h2 id="mse">Mean squared error</h2>
+
+\[
+\text{MSE} = \frac{1}{n}\sum_{i=1}^{n}(y_i - \hat{y}_i)^2
+\]
+
+<p>Same quantity as the cost function in chapter 2. Its units are the <em>square</em> of the target's units, so an MSE of 9 on prices in rupees means rupees-squared — not directly interpretable. Its virtue is that it penalises large errors heavily.</p>
+
+<h2 id="mae">Mean absolute error</h2>
+
+\[
+\text{MAE} = \frac{1}{n}\sum_{i=1}^{n}|y_i - \hat{y}_i|
+\]
+
+<p>Same units as the target, so directly interpretable: "on average we are off by ₹4,200". It weights every error in proportion to its size, which makes it <strong>robust to outliers</strong> — one wildly wrong prediction moves MAE by its own size, not its square.</p>
+
+<h2 id="rmse">Root mean squared error</h2>
+
+\[
+\text{RMSE} = \sqrt{\text{MSE}}
+\]
+
+<p>This exists purely to undo the squaring. It has the same units as the target, like MAE, but still penalises large errors quadratically. The practical rule: RMSE ≥ MAE always, and the size of the gap tells you how concentrated the errors are. If RMSE and MAE are close, errors are uniform; if RMSE is much larger, a few large errors dominate.</p>
+
+<h2 id="r2">Coefficient of determination</h2>
+
+\[
+R^2 = 1 - \frac{SS_{res}}{SS_{tot}},
+\qquad
+SS_{res} = \sum (y_i - \hat{y}_i)^2,
+\qquad
+SS_{tot} = \sum (y_i - \bar{y})^2
+\]
+
+<p>\(SS_{tot}\) is the error of the dumbest possible model — always predicting the mean. \(SS_{res}\) is your model's error. So \(R^2\) answers: <em>how much of the variance did I explain, compared to just guessing the average?</em></p>
+
+<ul>
+<li>\(R^2 = 1\) — perfect prediction.</li>
+<li>\(R^2 = 0\) — no better than predicting the mean.</li>
+<li>\(R^2 < 0\) — <strong>worse</strong> than predicting the mean. This is possible on test data and is always a red flag.</li>
+</ul>
+
+<div class="box example">
+<span class="box-label">Worked example — all four on one dataset</span>
+<p>Data: \((1,2), (2,3), (3,5)\). Fitted model: \(\hat{y} = 0.333 + 1.5x\).</p>
+<p>Predictions: 1.833, 3.333, 4.833. Residuals: 0.167, −0.333, 0.167. Mean of \(y\): \(\bar{y} = 3.333\).</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Quantity</th><th>Calculation</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>\(SS_{res}\)</td><td>0.0278 + 0.1111 + 0.0278</td><td>0.1667</td></tr>
+<tr><td>\(SS_{tot}\)</td><td>1.7778 + 0.1111 + 2.7778</td><td>4.6667</td></tr>
+<tr><td>MSE</td><td>0.1667 / 3</td><td>0.0556</td></tr>
+<tr><td>MAE</td><td>(0.167 + 0.333 + 0.167) / 3</td><td>0.2222</td></tr>
+<tr><td>RMSE</td><td>√0.0556</td><td>0.2357</td></tr>
+<tr><td>\(R^2\)</td><td>1 − 0.1667/4.6667</td><td>0.9643</td></tr>
+</tbody></table></div>
+<p>Reading it: the model explains 96.4 % of the variance, and a typical prediction is off by about 0.22 in the target's units.</p>
+</div>
+
+<div class="box warn">
+<span class="box-label">Exam trap</span>
+<p>\(R^2\) can be negative. Students often assume it is bounded in \([0,1]\), but that is only true if the model is fitted on the same data it is evaluated on. On a held-out test set, a model worse than the mean gives \(R^2 < 0\). If a question asks for the possible range, the answer is \((-\infty, 1]\).</p>
+</div>
+
+<h2 id="check">Check your understanding</h2>
+
+<div class="quiz">
+  <div class="qtext">A model has RMSE = 4.1 and MAE = 1.9. What does the gap tell you?</div>
+  <div class="opts">
+    <button class="opt">The model is overfitting</button>
+    <button class="opt" data-correct>Most errors are small but a few are very large</button>
+    <button class="opt">The model is underfitting</button>
+    <button class="opt">Nothing — the two are unrelated</button>
+  </div>
+  <div class="fb">RMSE squares before averaging, so it is dragged up disproportionately by large residuals, while MAE is not. A gap this wide means the error distribution has a heavy tail: a handful of badly wrong predictions among many good ones. MAE reports the typical error, RMSE reports the worst of it.</div>
+</div>
+
+<!--TOPIC:04-bias-variance|Bias, Variance and Regularisation|-->
+<h2 id="defs">Bias and variance defined</h2>
+
+<p>The error of a model has two sources, and they pull in opposite directions.</p>
+
+<div class="box def">
+<span class="box-label">Definitions</span>
+<p><strong>Bias</strong> is error from wrong assumptions in the model — the gap between the average prediction and the truth. A straight line fitted to a curve has high bias.</p>
+<p><strong>Variance</strong> is error from sensitivity to the particular training sample — how much the fitted model would change if you retrained on different data. A very flexible model has high variance.</p>
+</div>
+
+<p>The decomposition, for squared error, is:</p>
+
+\[
+\text{Expected error} = \text{Bias}^2 + \text{Variance} + \text{Irreducible noise}
+\]
+
+<p>The third term is a floor you cannot beat — no model can predict randomness. The first two are what you trade.</p>
+
+<h2 id="underover">Underfitting and overfitting</h2>
+
+<div class="tablewrap"><table>
+<thead><tr><th></th><th>Underfitting</th><th>Overfitting</th></tr></thead>
+<tbody>
+<tr><td>Bias</td><td>High</td><td>Low</td></tr>
+<tr><td>Variance</td><td>Low</td><td>High</td></tr>
+<tr><td>Training error</td><td>High</td><td>Very low</td></tr>
+<tr><td>Test error</td><td>High</td><td>High</td></tr>
+<tr><td>Diagnosis</td><td>Both errors high and close</td><td>Large gap between train and test</td></tr>
+<tr><td>Remedy</td><td>More flexible model, better features</td><td>More data, simpler model, regularisation</td></tr>
+</tbody></table></div>
+
+<div class="box example">
+<span class="box-label">Worked example — spotting it from the numbers</span>
+<p>Model A: training \(R^2 = 0.62\), test \(R^2 = 0.60\). Model B: training \(R^2 = 0.99\), test \(R^2 = 0.58\).</p>
+<p><strong>A underfits.</strong> Both scores are mediocre and nearly equal — the model is not flexible enough, and more data will not help. Add features or a more expressive hypothesis.</p>
+<p><strong>B overfits.</strong> Training is near-perfect but test is no better than A. The model has memorised the training set. The gap is the variance, and the remedies are more data, a simpler model, or regularisation.</p>
+</div>
+
+<h2 id="reg">Regularisation</h2>
+
+<p>Regularisation adds a penalty for large parameters to the cost function. Large coefficients mean the model is leaning hard on particular features, which is exactly what overfitting looks like.</p>
+
+\[
+J(\theta) = \underbrace{\frac{1}{n}\sum (h_\theta(x_i) - y_i)^2}_{\text{fit the data}} + \underbrace{\lambda\,R(\theta)}_{\text{stay simple}}
+\]
+
+<p>The hyperparameter \(\lambda\) sets the trade. \(\lambda = 0\) recovers ordinary regression; large \(\lambda\) forces every coefficient toward zero and the model toward underfitting.</p>
+
+<div class="tablewrap"><table>
+<thead><tr><th>Name</th><th>Penalty \(R(\theta)\)</th><th>What it does to coefficients</th></tr></thead>
+<tbody>
+<tr><td><strong>Ridge</strong> (L2)</td><td>\(\sum \theta_j^2\)</td><td>Shrinks all coefficients smoothly toward zero, never exactly to zero</td></tr>
+<tr><td><strong>Lasso</strong> (L1)</td><td>\(\sum |\theta_j|\)</td><td>Drives some coefficients <strong>exactly</strong> to zero — performs feature selection</td></tr>
+<tr><td><strong>Elastic Net</strong></td><td>\(\alpha\sum|\theta_j| + (1-\alpha)\sum\theta_j^2\)</td><td>Both: selection plus stability when features are correlated</td></tr>
+</tbody></table></div>
+
+<div class="box why">
+<span class="box-label">Why L1 produces exact zeros and L2 does not</span>
+<p>Picture the penalty as a constraint region: for L2 it is a circle, for L1 it is a diamond with corners on the axes. The solution sits where the error contours first touch that region. A circle has no corners, so contact is almost always at a smooth point with both coefficients non-zero. A diamond has sharp corners on the axes, and contours tend to reach a corner first — and a corner means one coefficient is exactly zero. That is the whole geometric argument, and it is worth being able to sketch.</p>
+</div>
+
+<div class="box warn">
+<span class="box-label">Do not penalise the intercept</span>
+<p>\(\theta_0\) is normally left out of the penalty. Shrinking the intercept pulls every prediction toward zero, which is meaningless if your target's mean is far from zero. Penalise the slopes, not the offset.</p>
+</div>
+
+<h2 id="check">Check your understanding</h2>
+
+<div class="quiz">
+  <div class="qtext">You need a model that also tells you which features are irrelevant. Which penalty do you use?</div>
+  <div class="opts">
+    <button class="opt">Ridge, because it shrinks everything</button>
+    <button class="opt" data-correct>Lasso, because it drives some coefficients exactly to zero</button>
+    <button class="opt">Neither — regularisation cannot do that</button>
+    <button class="opt">Elastic Net only</button>
+  </div>
+  <div class="fb">A coefficient of exactly zero removes that feature from the model entirely, which is feature selection. Ridge shrinks coefficients toward zero but never reaches it, so every feature stays in. Elastic Net can do it too, but Lasso is the direct answer.</div>
+</div>
+
+<!--TOPIC:05-logistic-regression|Logistic Regression|-->
+<div class="box note" style="background:var(--amber-soft);border:1px solid rgba(161,98,7,.24);border-radius:6px;padding:12px 16px;margin:0 0 18px">
+<span class="box-label" style="font-family:var(--font-mono);font-size:9px;letter-spacing:1.8px;text-transform:uppercase;color:var(--amber);font-weight:700;margin-bottom:5px;display:block">Textbook-supplied</span>
+<p style="margin:0">Your class notes name logistic regression twice but never work it out. This chapter is built from Alpaydin chapter 10 and Géron chapter 4.</p>
+</div>
+
+<h2 id="why">Why linear regression cannot be reused</h2>
+
+<p>Suppose you want to predict whether a tumour is malignant (1) or benign (0). Fitting a line gives predictions like 0.3 or 1.4 — numbers that are not probabilities and can fall outside \([0,1]\) entirely. Worse, the fit is dominated by points far from the boundary, which is the opposite of what a classifier needs.</p>
+
+<p>What we want is a model whose output is always a valid probability, and whose decision is made by thresholding that probability.</p>
+
+<h2 id="sigmoid">The sigmoid</h2>
+
+\[
+\sigma(z) = \frac{1}{1 + e^{-z}}, \qquad h_\theta(x) = \sigma(\theta_0 + \theta_1 x)
+\]
+
+<p>The sigmoid squashes any real number into \((0,1)\): \(z = 0\) gives 0.5, large positive \(z\) approaches 1, large negative approaches 0. So the linear part decides <em>which side</em> and <em>how confidently</em>, and the sigmoid converts that into a probability.</p>
+
+<h2 id="odds">Odds and log-odds</h2>
+
+<p>The model is linear in the <strong>log-odds</strong>, not in the probability:</p>
+
+\[
+\log\frac{p}{1-p} = \theta_0 + \theta_1 x
+\]
+
+<p>This is worth understanding rather than memorising. A coefficient \(\theta_1 = 0.7\) means that a one-unit increase in \(x\) multiplies the <em>odds</em> by \(e^{0.7} \approx 2.01\) — it doubles them. That is a statement you can put in a report; "the probability increases by 0.7" would be meaningless since probabilities are capped at 1.</p>
+
+<h2 id="boundary">The decision boundary</h2>
+
+<p>Predict 1 when \(h_\theta(x) \ge 0.5\), which happens exactly when \(\theta_0 + \theta_1 x \ge 0\). So the boundary is where the linear part is zero — a point in one dimension, a line in two, a hyperplane beyond.</p>
+
+<div class="box example">
+<span class="box-label">Worked example — a prediction by hand</span>
+<p>Model: \(h(x) = \sigma(-4 + 2x)\). Classify \(x = 3\).</p>
+<p>\(z = -4 + 2(3) = 2\). \(h = \sigma(2) = \frac{1}{1+e^{-2}} = \frac{1}{1+0.1353} = 0.8808\).</p>
+<p>Since 0.8808 ≥ 0.5, predict class 1, with 88 % confidence.</p>
+<p>The boundary is at \(-4 + 2x = 0\), so \(x = 2\): below 2 predict 0, above 2 predict 1.</p>
+</div>
+
+<h2 id="cost">The cost function, and why not squared error</h2>
+
+<p>Using squared error with a sigmoid gives a non-convex cost — it has multiple local minima, and gradient descent can settle in the wrong one. The standard choice is <strong>log-loss</strong> (binary cross-entropy):</p>
+
+\[
+J(\theta) = -\frac{1}{n}\sum_{i=1}^{n}\Bigl[y_i\log h_\theta(x_i) + (1-y_i)\log\bigl(1-h_\theta(x_i)\bigr)\Bigr]
+\]
+
+<p>Read it as a switch. When \(y = 1\) the second term vanishes and the cost is \(-\log h\) — which is 0 if the prediction was 1 and grows without bound as the prediction approaches 0. When \(y = 0\) the first term vanishes and the cost is \(-\log(1-h)\), symmetric. Confidently wrong predictions are punished enormously; that is what makes it convex with the sigmoid.</p>
+
+<div class="box example">
+<span class="box-label">Worked example — the cost of one prediction</span>
+<p>With \(x = 3\), \(y = 1\), and \(h = 0.8808\):</p>
+<p>\(J = -\log(0.8808) = 0.1269\).</p>
+<p>Had the model been confidently wrong — \(h = 0.05\) with \(y = 1\) — the cost would be \(-\log(0.05) = 2.996\), roughly 24 times larger. That steep penalty is what drives the parameters away from confident errors.</p>
+</div>
+
+<h2 id="gradient">The gradient</h2>
+
+<p>Remarkably, the update rule has exactly the same shape as linear regression:</p>
+
+\[
+\theta_j := \theta_j - \alpha \sum_{i=1}^{n}\bigl(h_\theta(x_i) - y_i\bigr)x_{ij}
+\]
+
+<p>The derivation differs completely, but the result is the residual times the feature. This is not a coincidence — it follows from using the canonical link function for the Bernoulli distribution.</p>
+
+<h2 id="multiclass">More than two classes</h2>
+
+<p>Replace the sigmoid with the <strong>softmax</strong>, which turns a vector of scores into a probability distribution over \(k\) classes:</p>
+
+\[
+\text{softmax}(z)_i = \frac{e^{z_i}}{\sum_{j} e^{z_j}}
+\]
+
+<p>Binary logistic regression is the special case \(k = 2\). The loss becomes categorical cross-entropy.</p>
+
+<h2 id="check">Check your understanding</h2>
+
+<div class="quiz">
+  <div class="qtext">In \(h(x) = \sigma(-4 + 2x)\), what does the coefficient 2 mean?</div>
+  <div class="opts">
+    <button class="opt">A one-unit increase in x raises the probability by 2</button>
+    <button class="opt" data-correct>A one-unit increase in x multiplies the odds by e² ≈ 7.39</button>
+    <button class="opt">The boundary is at x = 2</button>
+    <button class="opt">The model is 2× more accurate</button>
+  </div>
+  <div class="fb">Logistic regression is linear in the log-odds, so a unit increase in x adds 2 to the log-odds, which multiplies the odds by e² ≈ 7.39. Option 3 is true but is a fact about the intercept and slope together, not about the coefficient on its own.</div>
+</div>
