@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>12 · DBSCAN · ML Notes</title>
+<meta name="description" content="Density-based clustering: find dense regions and label the rest as noise.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,400&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']] },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+  };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css">
+</head>
+<body data-page="topic-12-dbscan">
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../index.html">ML<span>.</span>Notes</a>
+    <nav class="topnav">
+      <a href="../index.html">Home</a>
+      <a href="../topics/01-framework.html">Chapters</a>
+      <a href="../visualizers.html">Visualizers</a>
+      <a href="../practice.html">Practice</a>
+      <a href="../glossary.html">Glossary</a>
+    </nav>
+    <div class="searchbox">
+      <input id="search-input" type="search" placeholder="Search topics…  ( / )" autocomplete="off" aria-label="Search the textbook">
+      <div class="searchresults" id="search-results"></div>
+    </div>
+  </div>
+</header>
+<div class="shell">
+<nav class="sidebar" aria-label="Chapter navigation">
+<div class="side-group">Foundations</div>
+<a href="../topics/01-framework.html" data-topic-id="topic-01-framework">01 · The Machine-Learning Framework</a>
+<div class="side-group">Supervised Learning — Regression</div>
+<a href="../topics/02-linear-regression.html" data-topic-id="topic-02-linear-regression">02 · Linear Regression and Gradient Descent</a>
+<a href="../topics/03-regression-metrics.html" data-topic-id="topic-03-regression-metrics">03 · Regression Metrics</a>
+<a href="../topics/04-bias-variance.html" data-topic-id="topic-04-bias-variance">04 · Bias, Variance and Regularisation</a>
+<div class="side-group">Supervised Learning — Classification</div>
+<a href="../topics/05-logistic-regression.html" data-topic-id="topic-05-logistic-regression">05 · Logistic Regression</a>
+<a href="../topics/06-naive-bayes.html" data-topic-id="topic-06-naive-bayes">06 · Naive Bayes</a>
+<a href="../topics/07-decision-trees.html" data-topic-id="topic-07-decision-trees">07 · Decision Trees</a>
+<a href="../topics/08-knn.html" data-topic-id="topic-08-knn">08 · K-Nearest Neighbours</a>
+<a href="../topics/09-classification-metrics.html" data-topic-id="topic-09-classification-metrics">09 · Classification Metrics</a>
+<a href="../topics/10-svm.html" data-topic-id="topic-10-svm">10 · Support Vector Machines</a>
+<div class="side-group">Unsupervised Learning — Clustering</div>
+<a href="../topics/11-kmeans.html" data-topic-id="topic-11-kmeans">11 · k-Means Clustering</a>
+<a href="../topics/12-dbscan.html" data-topic-id="topic-12-dbscan" class="active">12 · DBSCAN</a>
+<a href="../topics/13-optics.html" data-topic-id="topic-13-optics">13 · OPTICS</a>
+<a href="../topics/14-hierarchical.html" data-topic-id="topic-14-hierarchical">14 · Hierarchical Clustering</a>
+<div class="side-group">Tools</div>
+<a href="../visualizers.html">Interactive Visualizers</a>
+<a href="../practice.html">Practice and Examination Questions</a>
+<a href="../glossary.html">Glossary</a>
+</nav>
+<main>
+<div class="kicker">Chapter 12</div>
+<h1>DBSCAN</h1>
+<p class="lede">Density-based clustering: find dense regions and label the rest as noise.</p>
+<label class="chapter-check"><input type="checkbox" data-complete="topic-12-dbscan" aria-label="Mark this chapter complete"><span class="cc-text">Mark this chapter complete</span></label>
+<h2 id="idea">Clustering by density</h2>
+
+<p>k-means asks "which centre is this point nearest?" DBSCAN asks a different question: <em>is this point in a dense region, and if so which dense region is it connected to?</em> That single change fixes four of k-means' five weaknesses at once — it finds the number of clusters itself, it handles non-spherical shapes, it tolerates outliers, and it explicitly labels points that belong to no cluster.</p>
+
+<div class="box def">
+<span class="box-label">The two parameters</span>
+<p><strong>eps</strong> (ε) — the radius of a neighbourhood.<br>
+<strong>MinPts</strong> — how many points a neighbourhood must contain for a point to count as dense.</p>
+<p>Together they define what "dense" means. Everything else follows.</p>
+</div>
+
+<h2 id="definitions">The definitions</h2>
+
+<div class="tablewrap"><table>
+<thead><tr><th>Term</th><th>Definition</th></tr></thead>
+<tbody>
+<tr><td>ε-neighbourhood of p</td><td>All points within distance ε of p, <strong>including p itself</strong></td></tr>
+<tr><td><strong>Core point</strong></td><td>A point whose ε-neighbourhood contains at least MinPts points</td></tr>
+<tr><td><strong>Border point</strong></td><td>Not a core point, but inside the ε-neighbourhood of some core point</td></tr>
+<tr><td><strong>Noise point</strong></td><td>Neither core nor border — belongs to no cluster</td></tr>
+<tr><td>Directly density-reachable</td><td>q is directly density-reachable from p if q is in p's neighbourhood <em>and</em> p is core</td></tr>
+<tr><td>Density-reachable</td><td>The transitive closure of the above — a chain of core points</td></tr>
+<tr><td>Density-connected</td><td>p and q are both density-reachable from some common point o</td></tr>
+</tbody></table></div>
+
+<p>Note the asymmetry: q can be density-reachable from a core p while p is not reachable from q, because border points are not core. That is why clusters are defined via <em>density-connectivity</em>, which is symmetric.</p>
+
+<h2 id="algorithm">The algorithm, step by step</h2>
+
+<ol>
+<li>Mark every point as <strong>unvisited</strong>.</li>
+<li>Pick an unvisited point \(p\). Compute its ε-neighbourhood.</li>
+<li>If the neighbourhood has fewer than MinPts points, mark \(p\) as <strong>noise</strong> and move on. (It may later be reclassified as a border point if a cluster grows to reach it.)</li>
+<li>Otherwise \(p\) is <strong>core</strong>: start a new cluster and add every point in its neighbourhood to a <em>seed list</em>.</li>
+<li>For each point \(q\) in the seed list that is still unvisited: mark it visited, compute its neighbourhood, and if \(q\) is itself core, add its neighbours to the seed list. Every point reached joins the current cluster.</li>
+<li>When the seed list is exhausted, the cluster is complete. Return to step 2 for the next unvisited point.</li>
+</ol>
+
+<p>The cost is \(O(n^2)\) in the worst case because every neighbourhood is a full scan. With a spatial index (a k-d tree) the neighbourhood queries become \(O(\log n)\), giving \(O(n\log n)\).</p>
+
+<h2 id="ex1">Solved example 1 — eps = 1.5, MinPts = 3</h2>
+
+<div class="box example">
+<span class="box-label">Nine points in two dimensions</span>
+<p>A(0,0), B(1,0), C(0,1), D(1,1), I(2.5,0), H(4.5,0), E(5,5), F(5.5,5), G(6,5).</p>
+
+<p><strong>Step 1 — compute every ε-neighbourhood.</strong> This is the whole problem; the algorithm is bookkeeping after it.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Point</th><th>Points within 1.5</th><th>Count</th><th>Type</th></tr></thead>
+<tbody>
+<tr><td>A(0,0)</td><td>A, B, C, D</td><td>4</td><td><strong>core</strong></td></tr>
+<tr><td>B(1,0)</td><td>A, B, C, D, I</td><td>5</td><td><strong>core</strong></td></tr>
+<tr><td>C(0,1)</td><td>A, B, C, D</td><td>4</td><td><strong>core</strong></td></tr>
+<tr><td>D(1,1)</td><td>A, B, C, D</td><td>4</td><td><strong>core</strong></td></tr>
+<tr><td>I(2.5,0)</td><td>I, B</td><td>2</td><td><strong>border</strong></td></tr>
+<tr><td>H(4.5,0)</td><td>H</td><td>1</td><td><strong>noise</strong></td></tr>
+<tr><td>E(5,5)</td><td>E, F, G</td><td>3</td><td><strong>core</strong></td></tr>
+<tr><td>F(5.5,5)</td><td>E, F, G</td><td>3</td><td><strong>core</strong></td></tr>
+<tr><td>G(6,5)</td><td>E, F, G</td><td>3</td><td><strong>core</strong></td></tr>
+</tbody></table></div>
+
+<p><strong>Step 2 — the distances that decide it.</strong> A few are worth checking by hand:</p>
+<ul>
+<li>\(d(A,B) = 1.00\), \(d(A,C) = 1.00\), \(d(A,D) = \sqrt2 = 1.414\) — all ≤ 1.5, so A's neighbourhood is {A,B,C,D}.</li>
+<li>\(d(B,I) = |2.5-1| = 1.50\) — exactly ε, so <strong>included</strong>. This is what makes B's neighbourhood five points rather than four.</li>
+<li>\(d(I,H) = |4.5-2.5| = 2.00 > 1.5\) — so H is not in I's neighbourhood, and I stays a border point with only two neighbours.</li>
+<li>\(d(D,I) = \sqrt{1.5^2 + 1^2} = 1.803 > 1.5\) — D does not reach I.</li>
+</ul>
+
+<p><strong>Step 3 — grow the clusters.</strong></p>
+<p>Start at A (core). Its neighbourhood {A,B,C,D} seeds cluster 1. Process B — core, so add B's extra neighbour I. Process I — <em>not</em> core, so it joins the cluster but adds nothing further. The seed list empties.</p>
+<p><strong>Cluster 1 = {A, B, C, D, I}</strong> — four core points plus one border point.</p>
+<p>Next unvisited: H. Its neighbourhood is just itself, 1 &lt; 3 → <strong>noise</strong>.</p>
+<p>Next: E (core) → seeds cluster 2 with {E,F,G}. F and G are both core but add nothing new.</p>
+<p><strong>Cluster 2 = {E, F, G}</strong>.</p>
+
+<p><strong>Result:</strong> two clusters, one border point (I), one noise point (H).</p>
+</div>
+
+<div class="box why">
+<span class="box-label">The detail students miss</span>
+<p>I(2.5,0) is a <strong>border</strong> point, not core, because its own neighbourhood has only two members. But it still joins cluster 1, because it lies inside the neighbourhood of the core point B. A border point is always reachable from exactly one cluster in practice; if two clusters both reached it, they would be density-connected and would have merged.</p>
+</div>
+
+<h2 id="ex2">Solved example 2 — the same points with eps = 0.9</h2>
+
+<div class="box example">
+<span class="box-label">Showing the sensitivity to ε</span>
+<p>Keep MinPts = 3 and shrink ε to 0.9. Recompute the neighbourhoods.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Point</th><th>Points within 0.9</th><th>Count</th><th>Type</th></tr></thead>
+<tbody>
+<tr><td>A, B, C, D</td><td>only itself — every pairwise distance in the square is ≥ 1.0</td><td>1</td><td>noise</td></tr>
+<tr><td>I</td><td>I only (B is 1.5 away)</td><td>1</td><td>noise</td></tr>
+<tr><td>H</td><td>H only</td><td>1</td><td>noise</td></tr>
+<tr><td>E(5,5)</td><td>E, F (G is 1.0 away, just over ε)</td><td>2</td><td>border</td></tr>
+<tr><td>F(5.5,5)</td><td>E, F, G (both 0.5 away)</td><td>3</td><td><strong>core</strong></td></tr>
+<tr><td>G(6,5)</td><td>F, G</td><td>2</td><td>border</td></tr>
+</tbody></table></div>
+<p><strong>Result:</strong> one cluster {E, F, G} — F is core, E and G are border — and <strong>six noise points</strong>. The entire first group has vanished.</p>
+<p>Nothing about the data changed. Only ε did. This is the central practical difficulty with DBSCAN: one global density threshold cannot serve a dataset containing regions of different density.</p>
+</div>
+
+<h2 id="params">Choosing eps and MinPts</h2>
+
+<ul>
+<li><strong>MinPts</strong> first. A common rule is \(\text{MinPts} \ge d + 1\) for \(d\) dimensions, or \(2d\). Larger values make the algorithm more tolerant of noise and produce fewer, larger clusters.</li>
+<li><strong>eps</strong> second, from a <strong>k-distance plot</strong>: for each point compute the distance to its MinPts-th nearest neighbour, sort those distances, and plot them. The "knee" of the curve is a good ε — points beyond the knee are the ones that will be labelled noise.</li>
+</ul>
+
+<h2 id="compare">Strengths and weaknesses</h2>
+
+<div class="tablewrap"><table>
+<thead><tr><th>Strengths</th><th>Weaknesses</th></tr></thead>
+<tbody>
+<tr><td>Finds the number of clusters automatically</td><td>One global ε cannot handle varying density</td></tr>
+<tr><td>Handles arbitrary shapes — rings, crescents, chains</td><td>Struggles when clusters have very different densities</td></tr>
+<tr><td>Explicitly labels noise and outliers</td><td>Very sensitive to both parameters</td></tr>
+<tr><td>Deterministic — same input, same output (except for border-point ties)</td><td>Degrades in high dimensions, like every distance-based method</td></tr>
+<tr><td>Needs no k in advance</td><td>Cannot cluster data with large density variation at all well</td></tr>
+</tbody></table></div>
+
+<div class="box warn">
+<span class="box-label">The weakness that motivates chapter 13</span>
+<p>Every limitation in the right-hand column above traces to the same cause: <strong>ε is global</strong>. A radius small enough to separate two nearby dense clusters will call a genuinely-sparse cluster noise, and a radius large enough to catch the sparse cluster will merge the dense ones. OPTICS exists precisely to remove that constraint.</p>
+</div>
+
+<h2 id="code">Implementation</h2>
+
+<div class="codeblock">
+  <div class="codeblock-header"><span class="lang">Python</span><span class="file">dbscan.py</span><button class="copy-btn">Copy</button></div>
+<pre><code class="language-python">from math import dist
+
+UNVISITED, NOISE, CLUSTER = -2, -1, 0
+
+
+def region_query(points, p, eps):
+    """All indices within eps of points[p], including p itself."""
+    return [i for i, q in enumerate(points) if dist(points[p], q) <= eps]
+
+
+def dbscan(points, eps, min_pts):
+    labels = [UNVISITED] * len(points)
+    cluster_id = CLUSTER
+
+    for i in range(len(points)):
+        if labels[i] != UNVISITED:
+            continue
+
+        neighbours = region_query(points, i, eps)
+        if len(neighbours) < min_pts:
+            labels[i] = NOISE          # may be upgraded to border later
+            continue
+
+        labels[i] = cluster_id
+        seeds = [n for n in neighbours if n != i]
+
+        j = 0
+        while j < len(seeds):
+            q = seeds[j]
+            if labels[q] == NOISE:
+                labels[q] = cluster_id          # border point: reclaim it
+            if labels[q] != UNVISITED:
+                j += 1
+                continue
+            labels[q] = cluster_id
+            q_neighbours = region_query(points, q, eps)
+            if len(q_neighbours) >= min_pts:    # q is core: expand
+                seeds.extend(n for n in q_neighbours if n not in seeds)
+            j += 1
+
+        cluster_id += 1
+
+    return labels
+
+
+if __name__ == "__main__":
+    pts = [(0,0), (1,0), (0,1), (1,1), (2.5,0), (4.5,0), (5,5), (5.5,5), (6,5)]
+    names = ["A","B","C","D","I","H","E","F","G"]
+    for name, lab in zip(names, dbscan(pts, eps=1.5, min_pts=3)):
+        print(f"{name}: {'noise' if lab == NOISE else 'cluster ' + str(lab)}")
+    # A B C D I -> cluster 0 ;  E F G -> cluster 1 ;  H -> noise</code></pre>
+</div>
+
+<h2 id="check">Check your understanding</h2>
+
+<div class="quiz">
+  <div class="qtext">In solved example 1, why is I(2.5,0) a border point rather than noise?</div>
+  <div class="opts">
+    <button class="opt">Because it has more than MinPts neighbours</button>
+    <button class="opt" data-correct>Because it has only two neighbours of its own, but lies inside the neighbourhood of the core point B</button>
+    <button class="opt">Because it is far from every other point</button>
+    <button class="opt">Because it is the first point processed</button>
+  </div>
+  <div class="fb">A border point is defined as non-core but within ε of some core point. I's own neighbourhood is {I, B} — only two, below MinPts — so it is not core. But d(B, I) = 1.5 = ε, so I lies in B's neighbourhood, and B is core. That makes I a border point of cluster 1.</div>
+</div>
+
+<div class="quiz">
+  <div class="qtext">Shrinking eps from 1.5 to 0.9 turned the first group entirely into noise. What does this demonstrate?</div>
+  <div class="opts">
+    <button class="opt">That DBSCAN is non-deterministic</button>
+    <button class="opt" data-correct>That a single global density threshold is fragile when clusters have different densities</button>
+    <button class="opt">That MinPts should always be 1</button>
+    <button class="opt">That the points moved</button>
+  </div>
+  <div class="fb">The square cluster has points about 1.0–1.4 apart; the second cluster's points are 0.5 apart. No single ε can be both large enough for the first and small enough to distinguish the second. This is exactly the limitation OPTICS was designed to remove.</div>
+</div>
+<nav class="pager" aria-label="Chapter navigation">
+<a href="../topics/11-kmeans.html"><span class="dir">← Previous</span><span class="ttl">11 · k-Means Clustering</span></a>
+<a class="next" href="../topics/13-optics.html"><span class="dir">Next →</span><span class="ttl">13 · OPTICS</span></a>
+</nav>
+<footer style="margin-top:56px;padding-top:22px;border-top:1px solid var(--rule);font-size:13px;color:var(--ink-3)">
+  <p style="margin:0 0 6px"><strong style="color:var(--ink-2)">Machine Learning</strong> — an interactive textbook built from the class notes of 27 Aug – 26 Oct 2026, with Alpaydin and Géron as references.</p>
+  <p style="margin:0">Progress is saved in this browser only. <a href="../glossary.html">Glossary</a> · <a href="../practice.html">Practice</a> · <a href="../visualizers.html">Visualizers</a></p>
+</footer>
+</main>
+</div>
+<script>window.ML_SEARCH = [{"title": "01 · The Machine-Learning Framework", "topic": "Chapter", "url": "topics/01-framework.html", "keywords": "machine learning, supervised, unsupervised, reinforcement, train test split, workflow What it means to learn from data, and how the whole subject divides."}, {"title": "02 · Linear Regression and Gradient Descent", "topic": "Chapter", "url": "topics/02-linear-regression.html", "keywords": "linear regression, hypothesis, cost function, gradient descent, learning rate, MSE Fitting a line by minimising squared error, and how gradient descent finds the minimum."}, {"title": "03 · Regression Metrics", "topic": "Chapter", "url": "topics/03-regression-metrics.html", "keywords": "MSE, MAE, RMSE, R squared, coefficient of determination, SSres, SStot MSE, MAE, RMSE and R-squared: what each one rewards and punishes."}, {"title": "04 · Bias, Variance and Regularisation", "topic": "Chapter", "url": "topics/04-bias-variance.html", "keywords": "bias, variance, underfitting, overfitting, regularisation, Lasso, Ridge, Elastic Net, L1, L2 Why a model that fits the training data perfectly can be worse than one that does not."}, {"title": "05 · Logistic Regression", "topic": "Chapter", "url": "topics/05-logistic-regression.html", "keywords": "logistic regression, sigmoid, log odds, decision boundary, log loss, cross entropy Turning a linear model into a classifier with the sigmoid and log-loss."}, {"title": "06 · Naive Bayes", "topic": "Chapter", "url": "topics/06-naive-bayes.html", "keywords": "naive bayes, Bayes theorem, prior, likelihood, posterior, evidence, Laplace smoothing Classification by Bayes theorem under a deliberately naive independence assumption."}, {"title": "07 · Decision Trees", "topic": "Chapter", "url": "topics/07-decision-trees.html", "keywords": "decision tree, entropy, information gain, Gini impurity, ID3, pruning Splitting the feature space by whichever question reduces impurity the most."}, {"title": "08 · K-Nearest Neighbours", "topic": "Chapter", "url": "topics/08-knn.html", "keywords": "KNN, k nearest neighbours, Euclidean distance, majority vote, lazy learner, curse of dimensionality The laziest classifier there is: look at the neighbours and take a vote."}, {"title": "09 · Classification Metrics", "topic": "Chapter", "url": "topics/09-classification-metrics.html", "keywords": "confusion matrix, accuracy, precision, recall, F1, sensitivity, specificity The confusion matrix, and why accuracy alone can be dangerously misleading."}, {"title": "10 · Support Vector Machines", "topic": "Chapter", "url": "topics/10-svm.html", "keywords": "SVM, support vector machine, hyperplane, margin, hard margin, soft margin, dual, kernel Finding the widest street between two classes, and the kernel trick for when a line will not do."}, {"title": "11 · k-Means Clustering", "topic": "Chapter", "url": "topics/11-kmeans.html", "keywords": "k-means, clustering, centroid, Lloyd, SSE, elbow method, unsupervised Partitioning points into k groups by alternating assignment and centroid updates."}, {"title": "12 · DBSCAN", "topic": "Chapter", "url": "topics/12-dbscan.html", "keywords": "DBSCAN, density, eps, minPts, core point, border point, noise, clustering Density-based clustering: find dense regions and label the rest as noise."}, {"title": "13 · OPTICS", "topic": "Chapter", "url": "topics/13-optics.html", "keywords": "OPTICS, reachability, core distance, ordering, density, clustering, variable density Ordering points by reachability so clusters of different densities all show up."}, {"title": "14 · Hierarchical Clustering", "topic": "Chapter", "url": "topics/14-hierarchical.html", "keywords": "hierarchical, agglomerative, divisive, dendrogram, linkage, single, complete, average, ward Building a nested tree of clusters bottom-up or top-down, and reading it as a dendrogram."}, {"title": "Interactive Visualizers", "topic": "Tool", "url": "visualizers.html", "keywords": "Gradient descent, k-means, the metrics calculator and an entropy explorer."}, {"title": "Practice and Examination Questions", "topic": "Tool", "url": "practice.html", "keywords": "Graded questions with full worked solutions."}, {"title": "Glossary", "topic": "Tool", "url": "glossary.html", "keywords": "Every term used in the course, defined in one line."}, {"title": "What it means to learn from data", "topic": "Ch 01", "url": "topics/01-framework.html#what", "keywords": "What it means to learn from data"}, {"title": "The three learning types", "topic": "Ch 01", "url": "topics/01-framework.html#types", "keywords": "The three learning types"}, {"title": "The anatomy of a learning problem", "topic": "Ch 01", "url": "topics/01-framework.html#anatomy", "keywords": "The anatomy of a learning problem"}, {"title": "The workflow, and where it goes wrong", "topic": "Ch 01", "url": "topics/01-framework.html#workflow", "keywords": "The workflow, and where it goes wrong"}, {"title": "Check your understanding", "topic": "Ch 01", "url": "topics/01-framework.html#check", "keywords": "Check your understanding"}, {"title": "The hypothesis", "topic": "Ch 02", "url": "topics/02-linear-regression.html#hypothesis", "keywords": "The hypothesis"}, {"title": "The cost function", "topic": "Ch 02", "url": "topics/02-linear-regression.html#cost", "keywords": "The cost function"}, {"title": "The gradient", "topic": "Ch 02", "url": "topics/02-linear-regression.html#gradient", "keywords": "The gradient"}, {"title": "The update rule", "topic": "Ch 02", "url": "topics/02-linear-regression.html#gd", "keywords": "The update rule"}, {"title": "Implementation", "topic": "Ch 02", "url": "topics/02-linear-regression.html#python", "keywords": "Implementation"}, {"title": "Three practical notes", "topic": "Ch 02", "url": "topics/02-linear-regression.html#pitfalls", "keywords": "Three practical notes"}, {"title": "Check your understanding", "topic": "Ch 02", "url": "topics/02-linear-regression.html#check", "keywords": "Check your understanding"}, {"title": "Why one number is not enough", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#why", "keywords": "Why one number is not enough"}, {"title": "Mean squared error", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#mse", "keywords": "Mean squared error"}, {"title": "Mean absolute error", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#mae", "keywords": "Mean absolute error"}, {"title": "Root mean squared error", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#rmse", "keywords": "Root mean squared error"}, {"title": "Coefficient of determination", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#r2", "keywords": "Coefficient of determination"}, {"title": "Check your understanding", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#check", "keywords": "Check your understanding"}, {"title": "Bias and variance defined", "topic": "Ch 04", "url": "topics/04-bias-variance.html#defs", "keywords": "Bias and variance defined"}, {"title": "Underfitting and overfitting", "topic": "Ch 04", "url": "topics/04-bias-variance.html#underover", "keywords": "Underfitting and overfitting"}, {"title": "Regularisation", "topic": "Ch 04", "url": "topics/04-bias-variance.html#reg", "keywords": "Regularisation"}, {"title": "Check your understanding", "topic": "Ch 04", "url": "topics/04-bias-variance.html#check", "keywords": "Check your understanding"}, {"title": "Why linear regression cannot be reused", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#why", "keywords": "Why linear regression cannot be reused"}, {"title": "The sigmoid", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#sigmoid", "keywords": "The sigmoid"}, {"title": "Odds and log-odds", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#odds", "keywords": "Odds and log-odds"}, {"title": "The decision boundary", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#boundary", "keywords": "The decision boundary"}, {"title": "The cost function, and why not squared error", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#cost", "keywords": "The cost function, and why not squared error"}, {"title": "The gradient", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#gradient", "keywords": "The gradient"}, {"title": "More than two classes", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#multiclass", "keywords": "More than two classes"}, {"title": "Check your understanding", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#check", "keywords": "Check your understanding"}, {"title": "Classification by probability", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#idea", "keywords": "Classification by probability"}, {"title": "The naive assumption", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#assumption", "keywords": "The naive assumption"}, {"title": "Worked example — the Play Tennis dataset", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#worked", "keywords": "Worked example — the Play Tennis dataset"}, {"title": "The zero-frequency problem", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#zero", "keywords": "The zero-frequency problem"}, {"title": "Continuous features", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#continuous", "keywords": "Continuous features"}, {"title": "Implementation", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#code", "keywords": "Implementation"}, {"title": "Check your understanding", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#check", "keywords": "Check your understanding"}, {"title": "Splitting the feature space", "topic": "Ch 07", "url": "topics/07-decision-trees.html#idea", "keywords": "Splitting the feature space"}, {"title": "Entropy", "topic": "Ch 07", "url": "topics/07-decision-trees.html#entropy", "keywords": "Entropy"}, {"title": "Information gain", "topic": "Ch 07", "url": "topics/07-decision-trees.html#ig", "keywords": "Information gain"}, {"title": "Worked example — the Tennis root node", "topic": "Ch 07", "url": "topics/07-decision-trees.html#worked", "keywords": "Worked example — the Tennis root node"}, {"title": "Gini impurity", "topic": "Ch 07", "url": "topics/07-decision-trees.html#gini", "keywords": "Gini impurity"}, {"title": "Pruning", "topic": "Ch 07", "url": "topics/07-decision-trees.html#pruning", "keywords": "Pruning"}, {"title": "Check your understanding", "topic": "Ch 07", "url": "topics/07-decision-trees.html#check", "keywords": "Check your understanding"}, {"title": "The laziest classifier", "topic": "Ch 08", "url": "topics/08-knn.html#idea", "keywords": "The laziest classifier"}, {"title": "The distance metric", "topic": "Ch 08", "url": "topics/08-knn.html#distance", "keywords": "The distance metric"}, {"title": "Worked example", "topic": "Ch 08", "url": "topics/08-knn.html#worked", "keywords": "Worked example"}, {"title": "Choosing k", "topic": "Ch 08", "url": "topics/08-knn.html#k", "keywords": "Choosing k"}, {"title": "Implementation", "topic": "Ch 08", "url": "topics/08-knn.html#code", "keywords": "Implementation"}, {"title": "Check your understanding", "topic": "Ch 08", "url": "topics/08-knn.html#check", "keywords": "Check your understanding"}, {"title": "The confusion matrix", "topic": "Ch 09", "url": "topics/09-classification-metrics.html#cm", "keywords": "The confusion matrix"}, {"title": "The four metrics", "topic": "Ch 09", "url": "topics/09-classification-metrics.html#metrics", "keywords": "The four metrics"}, {"title": "Worked example", "topic": "Ch 09", "url": "topics/09-classification-metrics.html#worked", "keywords": "Worked example"}, {"title": "Why accuracy alone is not enough", "topic": "Ch 09", "url": "topics/09-classification-metrics.html#accuracy", "keywords": "Why accuracy alone is not enough"}, {"title": "Check your understanding", "topic": "Ch 09", "url": "topics/09-classification-metrics.html#check", "keywords": "Check your understanding"}, {"title": "The widest street", "topic": "Ch 10", "url": "topics/10-svm.html#idea", "keywords": "The widest street"}, {"title": "The equation of a hyperplane", "topic": "Ch 10", "url": "topics/10-svm.html#equation", "keywords": "The equation of a hyperplane"}, {"title": "Maximising the margin", "topic": "Ch 10", "url": "topics/10-svm.html#margin", "keywords": "Maximising the margin"}, {"title": "The hard-margin objective", "topic": "Ch 10", "url": "topics/10-svm.html#hard", "keywords": "The hard-margin objective"}, {"title": "The dual formulation", "topic": "Ch 10", "url": "topics/10-svm.html#dual", "keywords": "The dual formulation"}, {"title": "The soft margin", "topic": "Ch 10", "url": "topics/10-svm.html#soft", "keywords": "The soft margin"}, {"title": "The kernel trick", "topic": "Ch 10", "url": "topics/10-svm.html#kernel", "keywords": "The kernel trick"}, {"title": "Check your understanding", "topic": "Ch 10", "url": "topics/10-svm.html#check", "keywords": "Check your understanding"}, {"title": "The problem k-means solves", "topic": "Ch 11", "url": "topics/11-kmeans.html#problem", "keywords": "The problem k-means solves"}, {"title": "The algorithm, step by step", "topic": "Ch 11", "url": "topics/11-kmeans.html#algorithm", "keywords": "The algorithm, step by step"}, {"title": "Solved example 1 — two dimensions, k = 2", "topic": "Ch 11", "url": "topics/11-kmeans.html#ex1", "keywords": "Solved example 1 — two dimensions, k = 2"}, {"title": "Solved example 2 — one dimension, k = 2", "topic": "Ch 11", "url": "topics/11-kmeans.html#ex2", "keywords": "Solved example 2 — one dimension, k = 2"}, {"title": "Choosing k", "topic": "Ch 11", "url": "topics/11-kmeans.html#choosing-k", "keywords": "Choosing k"}, {"title": "The five challenges of k-means", "topic": "Ch 11", "url": "topics/11-kmeans.html#challenges", "keywords": "The five challenges of k-means"}, {"title": "Implementation", "topic": "Ch 11", "url": "topics/11-kmeans.html#code", "keywords": "Implementation"}, {"title": "Check your understanding", "topic": "Ch 11", "url": "topics/11-kmeans.html#check", "keywords": "Check your understanding"}, {"title": "Clustering by density", "topic": "Ch 12", "url": "topics/12-dbscan.html#idea", "keywords": "Clustering by density"}, {"title": "The definitions", "topic": "Ch 12", "url": "topics/12-dbscan.html#definitions", "keywords": "The definitions"}, {"title": "The algorithm, step by step", "topic": "Ch 12", "url": "topics/12-dbscan.html#algorithm", "keywords": "The algorithm, step by step"}, {"title": "Solved example 1 — eps = 1.5, MinPts = 3", "topic": "Ch 12", "url": "topics/12-dbscan.html#ex1", "keywords": "Solved example 1 — eps = 1.5, MinPts = 3"}, {"title": "Solved example 2 — the same points with eps = 0.9", "topic": "Ch 12", "url": "topics/12-dbscan.html#ex2", "keywords": "Solved example 2 — the same points with eps = 0.9"}, {"title": "Choosing eps and MinPts", "topic": "Ch 12", "url": "topics/12-dbscan.html#params", "keywords": "Choosing eps and MinPts"}, {"title": "Strengths and weaknesses", "topic": "Ch 12", "url": "topics/12-dbscan.html#compare", "keywords": "Strengths and weaknesses"}, {"title": "Implementation", "topic": "Ch 12", "url": "topics/12-dbscan.html#code", "keywords": "Implementation"}, {"title": "Check your understanding", "topic": "Ch 12", "url": "topics/12-dbscan.html#check", "keywords": "Check your understanding"}, {"title": "The problem with a global eps", "topic": "Ch 13", "url": "topics/13-optics.html#why", "keywords": "The problem with a global eps"}, {"title": "The two new quantities", "topic": "Ch 13", "url": "topics/13-optics.html#definitions", "keywords": "The two new quantities"}, {"title": "The algorithm, step by step", "topic": "Ch 13", "url": "topics/13-optics.html#algorithm", "keywords": "The algorithm, step by step"}, {"title": "Solved example 1 — a full ordering, computed by hand", "topic": "Ch 13", "url": "topics/13-optics.html#ex1", "keywords": "Solved example 1 — a full ordering, computed by hand"}, {"title": "Solved example 2 — two clusters of very different density", "topic": "Ch 13", "url": "topics/13-optics.html#ex2", "keywords": "Solved example 2 — two clusters of very different density"}, {"title": "Extracting clusters from the ordering", "topic": "Ch 13", "url": "topics/13-optics.html#extract", "keywords": "Extracting clusters from the ordering"}, {"title": "DBSCAN versus OPTICS", "topic": "Ch 13", "url": "topics/13-optics.html#compare", "keywords": "DBSCAN versus OPTICS"}, {"title": "Implementation", "topic": "Ch 13", "url": "topics/13-optics.html#code", "keywords": "Implementation"}, {"title": "Check your understanding", "topic": "Ch 13", "url": "topics/13-optics.html#check", "keywords": "Check your understanding"}, {"title": "A tree instead of a partition", "topic": "Ch 14", "url": "topics/14-hierarchical.html#idea", "keywords": "A tree instead of a partition"}, {"title": "Linkage — how to measure distance between clusters", "topic": "Ch 14", "url": "topics/14-hierarchical.html#linkage", "keywords": "Linkage — how to measure distance between clusters"}, {"title": "Solved example 1 — single linkage", "topic": "Ch 14", "url": "topics/14-hierarchical.html#ex1", "keywords": "Solved example 1 — single linkage"}, {"title": "Solved example 2 — the same points with complete linkage", "topic": "Ch 14", "url": "topics/14-hierarchical.html#ex2", "keywords": "Solved example 2 — the same points with complete linkage"}, {"title": "Reading a dendrogram", "topic": "Ch 14", "url": "topics/14-hierarchical.html#dendrogram", "keywords": "Reading a dendrogram"}, {"title": "Compared with the other methods", "topic": "Ch 14", "url": "topics/14-hierarchical.html#compare", "keywords": "Compared with the other methods"}, {"title": "Check your understanding", "topic": "Ch 14", "url": "topics/14-hierarchical.html#check", "keywords": "Check your understanding"}];</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
