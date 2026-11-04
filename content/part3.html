@@ -73,74 +73,6 @@ P(x \mid C_k) = \frac{1}{\sqrt{2\pi\sigma_k^2}}\exp\left(-\frac{(x-\mu_k)^2}{2\s
 
 <p>Estimate \(\mu_k\) and \(\sigma_k\) from the training rows of class \(k\). This is Gaussian naive Bayes.</p>
 
-<h2 id="code">Implementation</h2>
-
-<div class="codeblock">
-  <div class="codeblock-header"><span class="lang">Python</span><span class="file">naive_bayes.py</span><button class="copy-btn">Copy</button></div>
-<pre><code class="language-python">from collections import Counter, defaultdict
-
-
-def train(rows, labels):
-    """rows: list of dicts of feature -> value. Returns priors and likelihoods."""
-    priors = Counter(labels)
-    counts = defaultdict(Counter)
-    totals = Counter()
-    values = defaultdict(set)
-
-    for row, label in zip(rows, labels):
-        totals[label] += 1
-        for f, v in row.items():
-            counts[(label, f)][v] += 1
-            values[f].add(v)
-
-    return priors, counts, totals, values
-
-
-def predict(row, model, alpha=1.0):
-    """Returns {class: score}. alpha=1 gives Laplace smoothing."""
-    priors, counts, totals, values = model
-    scores = {}
-    n = sum(priors.values())
-
-    for label in priors:
-        score = priors[label] / n                    # prior
-        for f, v in row.items():
-            num = counts[(label, f)][v] + alpha
-            den = totals[label] + alpha * len(values[f])
-            score *= num / den                       # likelihood
-        scores[label] = score
-    return scores
-
-
-if __name__ == "__main__":
-    rows = [
-        {"outlook": "Sunny", "temp": "Hot",   "humidity": "High",   "wind": "Weak"},
-        {"outlook": "Sunny", "temp": "Hot",   "humidity": "High",   "wind": "Strong"},
-        {"outlook": "Overcast", "temp": "Hot", "humidity": "High",  "wind": "Weak"},
-        {"outlook": "Rain",  "temp": "Mild",  "humidity": "High",   "wind": "Weak"},
-        {"outlook": "Rain",  "temp": "Cool",  "humidity": "Normal", "wind": "Weak"},
-        {"outlook": "Rain",  "temp": "Cool",  "humidity": "Normal", "wind": "Strong"},
-        {"outlook": "Overcast", "temp": "Cool", "humidity": "Normal", "wind": "Strong"},
-        {"outlook": "Sunny", "temp": "Mild",  "humidity": "High",   "wind": "Weak"},
-        {"outlook": "Sunny", "temp": "Cool",  "humidity": "Normal", "wind": "Weak"},
-        {"outlook": "Rain",  "temp": "Mild",  "humidity": "Normal", "wind": "Weak"},
-        {"outlook": "Sunny", "temp": "Mild",  "humidity": "Normal", "wind": "Strong"},
-        {"outlook": "Overcast", "temp": "Mild", "humidity": "High", "wind": "Strong"},
-        {"outlook": "Overcast", "temp": "Hot", "humidity": "Normal", "wind": "Weak"},
-        {"outlook": "Rain",  "temp": "Mild",  "humidity": "High",   "wind": "Strong"},
-    ]
-    labels = ["No","No","Yes","Yes","Yes","No","Yes","No","Yes","Yes","Yes","Yes","Yes","No"]
-
-    model = train(rows, labels)
-    query = {"outlook": "Sunny", "temp": "Cool", "humidity": "High", "wind": "Strong"}
-    print(predict(query, model))     # {'No': ..., 'Yes': ...}</code></pre>
-</div>
-
-<div class="box warn">
-<span class="box-label">Exam trap</span>
-<p>The likelihood denominators are the <strong>class counts</strong> (9 and 5), not the dataset size (14). Writing \(2/14\) instead of \(2/9\) for "Sunny given Yes" is the single most common error in this question, and it is easy to avoid by asking "out of how many Yes days?"</p>
-</div>
-
 <h2 id="check">Check your understanding</h2>
 
 <div class="quiz">
@@ -155,21 +87,42 @@ if __name__ == "__main__":
 </div>
 
 <!--TOPIC:07-decision-trees|Decision Trees|-->
-<h2 id="idea">Splitting the feature space</h2>
+<h2 id="idea">What a decision tree is</h2>
 
-<p>A decision tree asks a sequence of yes/no questions about the features, and each leaf carries a predicted class. Learning means choosing which question to ask at each node — and "best" is defined by how much the split reduces <strong>impurity</strong>.</p>
+<p>A decision tree classifies by asking a sequence of yes/no questions about the features. Each <strong>internal node</strong> is a question about one attribute, each <strong>branch</strong> is one of that attribute's values, and each <strong>leaf</strong> carries a predicted class.</p>
 
-<h2 id="entropy">Entropy</h2>
+<div class="box def">
+<span class="box-label">Definition</span>
+<p>A decision tree is a tree-structured plan of attribute tests in which each path from root to leaf corresponds to a conjunction of attribute tests, and the leaf gives the classification for all instances satisfying that conjunction.</p>
+</div>
+
+<p>Learning the tree means deciding <em>which question to ask first at each node</em>. There are two attributes you could split on and both produce a valid tree — the algorithm needs a criterion to choose between them. That criterion is built from entropy.</p>
+
+<h2 id="entropy">Entropy — the impurity of a node</h2>
+
+<p>Entropy measures how mixed a set of class labels is. If a node contains only one class it is pure and carries no uncertainty; if it is an even mixture the uncertainty is maximal.</p>
 
 \[
-H(S) = -\sum_{i} p_i \log_2 p_i
+H(S) = -\sum_{i=1}^{c} p_i \log_2 p_i
 \]
 
-<p>Entropy measures how mixed a set of labels is. For two classes with proportion \(p\):</p>
+<p>where \(p_i\) is the fraction of examples in \(S\) belonging to class \(i\), and \(c\) is the number of classes. Every symbol:</p>
+
+<div class="tablewrap"><table>
+<thead><tr><th>Symbol</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td>\(S\)</td><td>The set of training examples at this node</td></tr>
+<tr><td>\(c\)</td><td>Number of distinct classes (2 for Yes/No)</td></tr>
+<tr><td>\(p_i\)</td><td>Proportion of \(S\) in class \(i\), so \(\sum p_i = 1\)</td></tr>
+<tr><td>\(\log_2\)</td><td>Base 2, so the result is measured in <strong>bits</strong></td></tr>
+</tbody></table></div>
+
+<p>For a two-class problem the curve is a single hump:</p>
 
 <ul>
-<li>All one class (\(p = 1\) or \(0\)): \(H = 0\). Pure, no uncertainty.</li>
-<li>50/50: \(H = 1\). Maximum uncertainty for two classes.</li>
+<li>All one class (\(p = 1\) or \(0\)): \(H = 0\). The node is pure — asking anything further gains nothing.</li>
+<li>Half and half (\(p = 0.5\)): \(H = 1\) bit. Maximum uncertainty for two classes.</li>
+<li>The curve is symmetric about 0.5 and never exceeds 1 for two classes.</li>
 </ul>
 
 <div class="viz" id="viz-entropy">
@@ -186,78 +139,383 @@ H(S) = -\sum_{i} p_i \log_2 p_i
   <div class="viz-log"></div>
 </div>
 
-<h2 id="ig">Information gain</h2>
+<h2 id="taken">Information taken</h2>
 
+<p>This is the step that is easy to skip and impossible to do the rest without. Once you split a node on an attribute, the parent set \(S\) is broken into smaller subsets \(S_1, S_2, \ldots, S_v\), one per value of that attribute. Each subset has its own entropy. To compare the split against the parent you need <em>one</em> number for all of them, so you take the <strong>weighted average</strong>, weighting each branch by how many examples fell into it.</p>
+
+<div class="box def">
+<span class="box-label">Definition — information taken</span>
+<p>The <strong>information taken</strong> by an attribute \(A\) is the total entropy that remains in the branches after splitting on \(A\), weighted by branch size:</p>
 \[
-\text{IG}(S, A) = H(S) - \sum_{v \in \text{values}(A)} \frac{|S_v|}{|S|} H(S_v)
+\text{InfoTaken}(S, A) = \sum_{v \in \text{values}(A)} \frac{|S_v|}{|S|}\, H(S_v)
 \]
-
-<p>In words: the entropy before the split, minus the weighted average entropy after it. That difference is the information the question gave you. ID3 picks the attribute with the largest gain, then recurses on each branch.</p>
-
-<h2 id="worked">Worked example — the Tennis root node</h2>
-
-<div class="box example">
-<span class="box-label">Choosing the first split</span>
-<p>14 rows, 9 Yes and 5 No.</p>
-<p><strong>Root entropy:</strong> \(H(S) = -\frac{9}{14}\log_2\frac{9}{14} - \frac{5}{14}\log_2\frac{5}{14} = 0.9403\)</p>
-<p><strong>Split on Outlook:</strong> Sunny (5 rows: 2 Yes, 3 No), Overcast (4: 4 Yes, 0 No), Rain (5: 3 Yes, 2 No).</p>
-<p>\(H(\text{Sunny}) = 0.9710\), \(H(\text{Overcast}) = 0\), \(H(\text{Rain}) = 0.9710\)</p>
-<p>Weighted: \(\frac{5}{14}(0.9710) + \frac{4}{14}(0) + \frac{5}{14}(0.9710) = 0.6936\)</p>
-<p>\(\text{IG}(\text{Outlook}) = 0.9403 - 0.6936 = \mathbf{0.2467}\)</p>
-<p><strong>All four attributes:</strong></p>
-<div class="tablewrap"><table>
-<thead><tr><th>Attribute</th><th>Information gain</th></tr></thead>
-<tbody>
-<tr><td>Outlook</td><td>0.247</td></tr>
-<tr><td>Humidity</td><td>0.152</td></tr>
-<tr><td>Wind</td><td>0.048</td></tr>
-<tr><td>Temperature</td><td>0.029</td></tr>
-</tbody></table></div>
-<p>Outlook wins, so it becomes the root. Recurse on each branch: the Overcast branch is pure (all Yes), so it becomes a leaf immediately.</p>
+<p>Equivalently: the average number of bits still needed to classify an example once you know its value of \(A\).</p>
 </div>
 
-<h2 id="gini">Gini impurity</h2>
+<p>Every symbol again:</p>
 
+<div class="tablewrap"><table>
+<thead><tr><th>Symbol</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td>\(A\)</td><td>The attribute being tested, e.g. Outlook</td></tr>
+<tr><td>\(v\)</td><td>One of its values, e.g. Sunny</td></tr>
+<tr><td>\(S_v\)</td><td>The subset of \(S\) whose examples have value \(v\)</td></tr>
+<tr><td>\(|S_v| / |S|\)</td><td>The weight — the fraction of examples going down that branch</td></tr>
+<tr><td>\(H(S_v)\)</td><td>The entropy still present inside that branch</td></tr>
+</tbody></table></div>
+
+<p>Two properties are worth stating because they explain everything that follows. The weights sum to 1, so information taken is itself a weighted average of entropies and therefore also lies between 0 and \(\log_2 c\). And because a split can never <em>increase</em> total impurity, information taken is always less than or equal to \(H(S)\) — you never lose information by splitting, you only sometimes fail to gain much.</p>
+
+<h2 id="ig">Information gain — the difference</h2>
+
+<div class="box def">
+<span class="box-label">Definition — information gain</span>
+<p>The <strong>information gain</strong> of an attribute is what the split took away:</p>
 \[
-\text{Gini}(S) = 1 - \sum_i p_i^2
+\text{Gain}(S, A) = H(S) - \text{InfoTaken}(S, A)
 \]
+</div>
 
-<p>An alternative impurity measure used by CART. It is cheaper to compute — no logarithms — and in practice picks almost the same splits.</p>
+<p>So the three quantities fit together as: entropy before, minus information taken (what remains), equals information gained (what was removed). An attribute with information taken equal to \(H(S)\) has gain 0 — it told you nothing. An attribute that leaves every branch pure has information taken 0 and gain equal to the whole of \(H(S)\) — a perfect split.</p>
+
+<div class="box why">
+<span class="box-label">Why "gain" and not just "lowest entropy"</span>
+<p>Comparing raw branch entropies across attributes with different numbers of values is misleading. An attribute with many distinct values produces many tiny branches, each easily pure, so its <em>unweighted</em> average entropy looks excellent while it has learned nothing general. The weighting by \(|S_v|/|S|\) is what corrects for this, which is why a unique ID column does not automatically win.</p>
+</div>
+
+<h2 id="trace">The full ID3 trace, step by step</h2>
+
+<p>The training set is the 14-day Tennis table. Every number below is computed from it.</p>
+
+<div class="tablewrap"><table>
+<thead><tr><th>Day</th><th>Outlook</th><th>Temperature</th><th>Humidity</th><th>Wind</th><th>Play</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Sunny</td><td>Hot</td><td>High</td><td>Weak</td><td>No</td></tr>
+<tr><td>2</td><td>Sunny</td><td>Hot</td><td>High</td><td>Strong</td><td>No</td></tr>
+<tr><td>3</td><td>Overcast</td><td>Hot</td><td>High</td><td>Weak</td><td>Yes</td></tr>
+<tr><td>4</td><td>Rain</td><td>Mild</td><td>High</td><td>Weak</td><td>Yes</td></tr>
+<tr><td>5</td><td>Rain</td><td>Cool</td><td>Normal</td><td>Weak</td><td>Yes</td></tr>
+<tr><td>6</td><td>Rain</td><td>Cool</td><td>Normal</td><td>Strong</td><td>No</td></tr>
+<tr><td>7</td><td>Overcast</td><td>Cool</td><td>Normal</td><td>Strong</td><td>Yes</td></tr>
+<tr><td>8</td><td>Sunny</td><td>Mild</td><td>High</td><td>Weak</td><td>No</td></tr>
+<tr><td>9</td><td>Sunny</td><td>Cool</td><td>Normal</td><td>Weak</td><td>Yes</td></tr>
+<tr><td>10</td><td>Rain</td><td>Mild</td><td>Normal</td><td>Weak</td><td>Yes</td></tr>
+<tr><td>11</td><td>Sunny</td><td>Mild</td><td>Normal</td><td>Strong</td><td>Yes</td></tr>
+<tr><td>12</td><td>Overcast</td><td>Mild</td><td>High</td><td>Strong</td><td>Yes</td></tr>
+<tr><td>13</td><td>Overcast</td><td>Hot</td><td>Normal</td><td>Weak</td><td>Yes</td></tr>
+<tr><td>14</td><td>Rain</td><td>Mild</td><td>High</td><td>Strong</td><td>No</td></tr>
+</tbody></table></div>
 
 <div class="box example">
-<span class="box-label">The same split scored with Gini</span>
-<p>Root: \(1 - (9/14)^2 - (5/14)^2 = 0.4592\)</p>
-<p>Branches: Sunny \(1 - (2/5)^2 - (3/5)^2 = 0.48\); Overcast \(1 - 1^2 - 0 = 0\); Rain \(0.48\).</p>
-<p>Weighted: \(\frac{5}{14}(0.48) + \frac{4}{14}(0) + \frac{5}{14}(0.48) = 0.3429\)</p>
-<p>Gini gain \(= 0.4592 - 0.3429 = \mathbf{0.1163}\)</p>
-<p>Different number, same ranking: Outlook is still the best split. Entropy and Gini disagree only rarely, and when they do the effect on accuracy is small.</p>
+<span class="box-label">Step 1 — the entropy of the whole set</span>
+<p>Count the classes: <strong>9 Yes</strong> (days 3, 4, 5, 7, 9, 10, 11, 12, 13) and <strong>5 No</strong> (days 1, 2, 6, 8, 14). Total 14.</p>
+<p>\(p_{\text{Yes}} = 9/14 = 0.6429\), \(p_{\text{No}} = 5/14 = 0.3571\).</p>
+\[
+H(S) = -(0.6429 \log_2 0.6429) - (0.3571 \log_2 0.3571)
+\]
+<p>\(\log_2 0.6429 = -0.6374\) and \(\log_2 0.3571 = -1.4854\).</p>
+\[
+H(S) = 0.6429(0.6374) + 0.3571(1.4854) = 0.4098 + 0.5304 = \mathbf{0.9403}
+\]
+<p><strong>What this means.</strong> Before any question is asked, about 0.94 bits of uncertainty remain about whether play will happen. Every gain computed below is measured against this number.</p>
+</div>
+
+<div class="box example">
+<span class="box-label">Step 2a — information taken by Outlook</span>
+<p>Outlook has three values, so the set splits into three subsets.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Branch</th><th>Days</th><th>Yes</th><th>No</th><th>Entropy</th></tr></thead>
+<tbody>
+<tr><td>Sunny</td><td>1, 2, 8, 9, 11</td><td>2</td><td>3</td><td>0.9710</td></tr>
+<tr><td>Overcast</td><td>3, 7, 12, 13</td><td>4</td><td>0</td><td>0.0000</td></tr>
+<tr><td>Rain</td><td>4, 5, 6, 10, 14</td><td>3</td><td>2</td><td>0.9710</td></tr>
+</tbody></table></div>
+<p><strong>Working one branch in full</strong>, Sunny (2 Yes, 3 No, total 5):</p>
+\[
+H(\text{Sunny}) = -\tfrac{2}{5}\log_2\tfrac{2}{5} - \tfrac{3}{5}\log_2\tfrac{3}{5} = 0.4(1.3219) + 0.6(0.7370) = 0.5288 + 0.4422 = 0.9710
+\]
+<p>Overcast is pure — every one of the four days played — so its entropy is 0 by definition. Rain has the same 3/2 split as Sunny, so it is also 0.9710.</p>
+<p><strong>Now weight by branch size.</strong> Sunny has 5 of 14 examples, Overcast 4 of 14, Rain 5 of 14:</p>
+\[
+\text{InfoTaken}(S, \text{Outlook}) = \tfrac{5}{14}(0.9710) + \tfrac{4}{14}(0) + \tfrac{5}{14}(0.9710)
+\]
+\[
+= 0.3468 + 0 + 0.3468 = \mathbf{0.6936}
+\]
+<p><strong>Gain</strong> \(= 0.9403 - 0.6936 = \mathbf{0.2467}\)</p>
+</div>
+
+<div class="box example">
+<span class="box-label">Step 2b — information taken by Temperature</span>
+<div class="tablewrap"><table>
+<thead><tr><th>Branch</th><th>Days</th><th>Yes</th><th>No</th><th>Entropy</th></tr></thead>
+<tbody>
+<tr><td>Hot</td><td>1, 2, 3, 13</td><td>2</td><td>2</td><td>1.0000</td></tr>
+<tr><td>Mild</td><td>4, 8, 10, 11, 12</td><td>4</td><td>1</td><td>0.7219</td></tr>
+<tr><td>Cool</td><td>5, 6, 7, 9, 14</td><td>3</td><td>2</td><td>0.9710</td></tr>
+</tbody></table></div>
+<p>Hot is a perfect 2/2 split, which is the maximum-entropy case: \(H = 1\) bit.</p>
+\[
+\text{InfoTaken} = \tfrac{4}{14}(1.0000) + \tfrac{5}{14}(0.7219) + \tfrac{5}{14}(0.9710) = 0.2857 + 0.2578 + 0.3468 = \mathbf{0.8903}
+\]
+<p><strong>Gain</strong> \(= 0.9403 - 0.8903 = \mathbf{0.0500}\)</p>
+</div>
+
+<div class="box example">
+<span class="box-label">Step 2c — information taken by Humidity</span>
+<div class="tablewrap"><table>
+<thead><tr><th>Branch</th><th>Days</th><th>Yes</th><th>No</th><th>Entropy</th></tr></thead>
+<tbody>
+<tr><td>High</td><td>1, 2, 3, 4, 8, 12, 14</td><td>3</td><td>4</td><td>0.9852</td></tr>
+<tr><td>Normal</td><td>5, 6, 7, 9, 10, 11, 13</td><td>6</td><td>1</td><td>0.5917</td></tr>
+</tbody></table></div>
+\[
+\text{InfoTaken} = \tfrac{7}{14}(0.9852) + \tfrac{7}{14}(0.5917) = 0.4926 + 0.2959 = \mathbf{0.7885}
+\]
+<p><strong>Gain</strong> \(= 0.9403 - 0.7885 = \mathbf{0.1518}\)</p>
+</div>
+
+<div class="box example">
+<span class="box-label">Step 2d — information taken by Wind</span>
+<div class="tablewrap"><table>
+<thead><tr><th>Branch</th><th>Days</th><th>Yes</th><th>No</th><th>Entropy</th></tr></thead>
+<tbody>
+<tr><td>Weak</td><td>1, 3, 4, 5, 8, 9, 10, 13</td><td>6</td><td>2</td><td>0.8113</td></tr>
+<tr><td>Strong</td><td>2, 6, 7, 11, 12, 14</td><td>3</td><td>3</td><td>1.0000</td></tr>
+</tbody></table></div>
+\[
+\text{InfoTaken} = \tfrac{8}{14}(0.8113) + \tfrac{6}{14}(1.0000) = 0.4636 + 0.4286 = \mathbf{0.8922}
+\]
+<p><strong>Gain</strong> \(= 0.9403 - 0.8922 = \mathbf{0.0481}\)</p>
+</div>
+
+<div class="box example">
+<span class="box-label">Step 3 — choose the root</span>
+<div class="tablewrap"><table>
+<thead><tr><th>Attribute</th><th>Information taken</th><th>Information gain</th><th>Rank</th></tr></thead>
+<tbody>
+<tr><td><strong>Outlook</strong></td><td>0.6936</td><td><strong>0.2467</strong></td><td>1</td></tr>
+<tr><td>Humidity</td><td>0.7885</td><td>0.1518</td><td>2</td></tr>
+<tr><td>Temperature</td><td>0.8903</td><td>0.0500</td><td>3</td></tr>
+<tr><td>Wind</td><td>0.8922</td><td>0.0481</td><td>4</td></tr>
+</tbody></table></div>
+<p>Outlook has the <em>smallest</em> information taken and therefore the <em>largest</em> gain. It becomes the root.</p>
+<p>Note that the ranking by information taken is the exact reverse of the ranking by gain — that is not a coincidence, since \(H(S)\) is the same constant for every attribute.</p>
+</div>
+
+<div class="box example">
+<span class="box-label">Step 4 — recurse on the Sunny branch</span>
+<p>The Sunny subset is days 1, 2, 8, 9, 11 — five examples, <strong>2 Yes</strong> (days 9, 11) and <strong>3 No</strong> (days 1, 2, 8).</p>
+<p>Its entropy is \(H = 0.9710\), the same as computed in step 2a. Outlook is now excluded, so the three remaining attributes are Temperature, Humidity and Wind.</p>
+
+<p><strong>Temperature on this subset:</strong></p>
+<div class="tablewrap"><table>
+<thead><tr><th>Value</th><th>Days</th><th>Yes</th><th>No</th><th>Entropy</th></tr></thead>
+<tbody>
+<tr><td>Hot</td><td>1, 2</td><td>0</td><td>2</td><td>0</td></tr>
+<tr><td>Mild</td><td>8, 11</td><td>1</td><td>1</td><td>1.0000</td></tr>
+<tr><td>Cool</td><td>9</td><td>1</td><td>0</td><td>0</td></tr>
+</tbody></table></div>
+\[
+\text{InfoTaken} = \tfrac{2}{5}(0) + \tfrac{2}{5}(1.0000) + \tfrac{1}{5}(0) = 0.4000 \quad\Rightarrow\quad \text{Gain} = 0.9710 - 0.4000 = 0.5710
+\]
+
+<p><strong>Humidity on this subset:</strong></p>
+<div class="tablewrap"><table>
+<thead><tr><th>Value</th><th>Days</th><th>Yes</th><th>No</th><th>Entropy</th></tr></thead>
+<tbody>
+<tr><td>High</td><td>1, 2, 8</td><td>0</td><td>3</td><td>0</td></tr>
+<tr><td>Normal</td><td>9, 11</td><td>2</td><td>0</td><td>0</td></tr>
+</tbody></table></div>
+\[
+\text{InfoTaken} = \tfrac{3}{5}(0) + \tfrac{2}{5}(0) = 0 \quad\Rightarrow\quad \text{Gain} = 0.9710 - 0 = \mathbf{0.9710}
+\]
+
+<p><strong>Wind on this subset:</strong></p>
+<div class="tablewrap"><table>
+<thead><tr><th>Value</th><th>Days</th><th>Yes</th><th>No</th><th>Entropy</th></tr></thead>
+<tbody>
+<tr><td>Weak</td><td>1, 8, 9</td><td>1</td><td>2</td><td>0.9183</td></tr>
+<tr><td>Strong</td><td>2, 11</td><td>1</td><td>1</td><td>1.0000</td></tr>
+</tbody></table></div>
+\[
+\text{InfoTaken} = \tfrac{3}{5}(0.9183) + \tfrac{2}{5}(1.0000) = 0.5510 + 0.4000 = 0.9510 \quad\Rightarrow\quad \text{Gain} = 0.0200
+\]
+
+<p><strong>Decision.</strong> Humidity wins with a gain of 0.9710 — every branch comes out pure, so the subtree terminates immediately:</p>
+<ul>
+<li>Humidity = <strong>High</strong> → all three days were No → leaf <strong>No</strong></li>
+<li>Humidity = <strong>Normal</strong> → both days were Yes → leaf <strong>Yes</strong></li>
+</ul>
+</div>
+
+<div class="box example">
+<span class="box-label">Step 5 — the Overcast branch terminates</span>
+<p>The Overcast subset is days 3, 7, 12, 13 — four examples, all Yes. Its entropy is already 0, so no attribute can improve it. It becomes a leaf labelled <strong>Yes</strong> at depth 1.</p>
+<p>This is worth noticing: the algorithm does not need to test anything on this branch, and forcing a split there would only add a node that always outputs the same answer.</p>
+</div>
+
+<div class="box example">
+<span class="box-label">Step 6 — recurse on the Rain branch</span>
+<p>The Rain subset is days 4, 5, 6, 10, 14 — five examples, <strong>3 Yes</strong> (4, 5, 10) and <strong>2 No</strong> (6, 14). Entropy 0.9710. Remaining attributes: Temperature, Humidity, Wind.</p>
+
+<p><strong>Temperature:</strong> Mild (4, 10, 14 → 2 Yes, 1 No, H = 0.9183), Cool (5, 6 → 1, 1, H = 1). Information taken \(= \frac{3}{5}(0.9183) + \frac{2}{5}(1) = 0.9510\), gain \(= 0.0200\).</p>
+<p><strong>Humidity:</strong> High (4, 14 → 1, 1, H = 1), Normal (5, 6, 10 → 2, 1, H = 0.9183). Information taken \(= \frac{2}{5}(1) + \frac{3}{5}(0.9183) = 0.9510\), gain \(= 0.0200\).</p>
+<p><strong>Wind:</strong> Weak (4, 5, 10 → 3 Yes, 0 No, H = 0), Strong (6, 14 → 0 Yes, 2 No, H = 0). Information taken \(= \frac{3}{5}(0) + \frac{2}{5}(0) = 0\), gain \(= \mathbf{0.9710}\).</p>
+
+<p><strong>Decision.</strong> Wind wins outright and both branches are pure:</p>
+<ul>
+<li>Wind = <strong>Weak</strong> → days 4, 5, 10, all Yes → leaf <strong>Yes</strong></li>
+<li>Wind = <strong>Strong</strong> → days 6, 14, both No → leaf <strong>No</strong></li>
+</ul>
+<p>Notice that Temperature and Humidity are tied at 0.0200 and neither is chosen. A tie would be broken arbitrarily — by attribute order, or by a secondary criterion such as Gini.</p>
+</div>
+
+<h2 id="tree">The finished tree</h2>
+
+<p>Assembling the four decisions gives the tree below. Internal nodes are questions, leaves are predictions, and each edge is labelled with the attribute value it corresponds to.</p>
+
+<div style="margin:22px 0;padding:18px;border:1px solid var(--rule-2);border-radius:10px;background:var(--surface);overflow-x:auto">
+<svg width="760" height="430" viewBox="0 0 760 430" role="img" aria-label="Decision tree for the Tennis dataset: root Outlook, Sunny leads to Humidity, Overcast to Yes, Rain to Wind">
+  <g stroke="var(--rule-2)" stroke-width="1.6" fill="none">
+    <line x1="380" y1="58" x2="140" y2="132"/>
+    <line x1="380" y1="58" x2="380" y2="132"/>
+    <line x1="380" y1="58" x2="620" y2="132"/>
+    <line x1="140" y1="168" x2="140" y2="240"/>
+    <line x1="380" y1="168" x2="380" y2="240"/>
+    <line x1="620" y1="168" x2="620" y2="240"/>
+    <line x1="140" y1="276" x2="60"  y2="348"/>
+    <line x1="140" y1="276" x2="220" y2="348"/>
+    <line x1="620" y1="276" x2="540" y2="348"/>
+    <line x1="620" y1="276" x2="700" y2="348"/>
+  </g>
+
+  <g font-family="var(--font-mono)" font-size="11" fill="var(--ink-3)" text-anchor="middle">
+    <text x="248" y="100">Sunny</text>
+    <text x="500" y="100">Rain</text>
+    <text x="404" y="100">Overcast</text>
+    <text x="96"  y="312">High</text>
+    <text x="184" y="312">Normal</text>
+    <text x="576" y="312">Weak</text>
+    <text x="664" y="312">Strong</text>
+  </g>
+
+  <g stroke-width="1.8">
+    <rect x="328" y="22"  width="104" height="36" rx="7" fill="var(--teal-bg)"   stroke="var(--accent-2)"/>
+    <rect x="88"  y="132" width="104" height="36" rx="7" fill="var(--teal-bg)"   stroke="var(--accent-2)"/>
+    <rect x="328" y="132" width="104" height="36" rx="7" fill="var(--teal-bg)"   stroke="var(--accent-2)"/>
+    <rect x="568" y="132" width="104" height="36" rx="7" fill="var(--teal-bg)"   stroke="var(--accent-2)"/>
+    <rect x="88"  y="240" width="104" height="36" rx="7" fill="var(--teal-bg)"   stroke="var(--accent-2)"/>
+    <rect x="568" y="240" width="104" height="36" rx="7" fill="var(--teal-bg)"   stroke="var(--accent-2)"/>
+    <rect x="328" y="240" width="104" height="36" rx="7" fill="var(--ok-bg)"     stroke="var(--ok)"/>
+    <rect x="8"   y="348" width="104" height="36" rx="7" fill="var(--accent-bg)" stroke="var(--accent)"/>
+    <rect x="168" y="348" width="104" height="36" rx="7" fill="var(--ok-bg)"     stroke="var(--ok)"/>
+    <rect x="488" y="348" width="104" height="36" rx="7" fill="var(--ok-bg)"     stroke="var(--ok)"/>
+    <rect x="648" y="348" width="104" height="36" rx="7" fill="var(--accent-bg)" stroke="var(--accent)"/>
+  </g>
+
+  <g font-family="var(--font-mono)" font-size="12.5" text-anchor="middle" fill="var(--accent-2)">
+    <text x="380" y="45">Outlook</text>
+    <text x="140" y="155">Humidity</text>
+    <text x="380" y="155">Overcast</text>
+    <text x="620" y="155">Wind</text>
+    <text x="140" y="263">Humidity</text>
+    <text x="620" y="263">Wind</text>
+  </g>
+  <g font-family="var(--font-mono)" font-size="13" font-weight="600" text-anchor="middle">
+    <text x="380" y="263" fill="var(--ok)">Yes</text>
+    <text x="60"  y="371" fill="var(--accent)">No</text>
+    <text x="220" y="371" fill="var(--ok)">Yes</text>
+    <text x="540" y="371" fill="var(--ok)">Yes</text>
+    <text x="700" y="371" fill="var(--accent)">No</text>
+  </g>
+</svg>
+</div>
+
+<p style="font-size:13.5px;color:var(--ink-2);text-align:center;margin-top:-6px">Blue boxes are tests on an attribute; green and red boxes are leaves. Depth 2, four leaves, six nodes in total.</p>
+
+<div class="box example">
+<span class="box-label">Using the tree on an unseen day</span>
+<p>Outlook = Sunny, Temperature = Cool, Humidity = High, Wind = Strong.</p>
+<ol>
+<li>Outlook = Sunny → follow the left branch to the Humidity node.</li>
+<li>Humidity = High → follow the left branch.</li>
+<li>Arrive at the leaf <strong>No</strong>.</li>
+</ol>
+<p>Only two attributes were consulted. Temperature and Wind were never examined because this path does not test them — which is the practical payoff of a tree: prediction cost is the depth, not the number of features.</p>
+</div>
+
+<h2 id="gini">Gini impurity — the alternative criterion</h2>
+
+<p>CART uses a different impurity measure. It is cheaper to compute because it needs no logarithms.</p>
+
+\[
+\text{Gini}(S) = 1 - \sum_{i} p_i^2
+\]
+
+<p>For two classes this is \(2pq\), which peaks at 0.5 when the split is even and is 0 when the node is pure.</p>
+
+<div class="box example">
+<span class="box-label">The same root split scored with Gini</span>
+<p><strong>Parent:</strong> \(\text{Gini}(S) = 1 - (9/14)^2 - (5/14)^2 = 1 - 0.4133 - 0.1276 = 0.4592\)</p>
+<p><strong>Branches:</strong></p>
+<ul>
+<li>Sunny (2, 3): \(1 - 0.16 - 0.36 = 0.48\)</li>
+<li>Overcast (4, 0): \(1 - 1 - 0 = 0\)</li>
+<li>Rain (3, 2): \(1 - 0.36 - 0.16 = 0.48\)</li>
+</ul>
+<p><strong>Weighted</strong> (the Gini analogue of information taken): \(\frac{5}{14}(0.48) + \frac{4}{14}(0) + \frac{5}{14}(0.48) = 0.3429\)</p>
+<p><strong>Gini gain</strong> \(= 0.4592 - 0.3429 = \mathbf{0.1163}\)</p>
+<p>Different number from the entropy gain of 0.2467, same conclusion: Outlook is the best split. The two criteria disagree only rarely, and when they do the effect on accuracy is small.</p>
 </div>
 
 <h2 id="pruning">Pruning</h2>
 
-<p>An unconstrained tree grows until every leaf is pure, which memorises the training data. Two remedies:</p>
+<p>An unconstrained tree grows until every leaf is pure, which memorises the training data — the training set above would be classified perfectly and generalise poorly. Two remedies:</p>
 
 <ul>
-<li><strong>Pre-pruning</strong> — stop early: limit depth, require a minimum number of samples per leaf, or refuse splits whose gain is below a threshold.</li>
-<li><strong>Post-pruning</strong> — grow the full tree, then remove branches that do not improve validation accuracy. More expensive, usually better.</li>
+<li><strong>Pre-pruning</strong> — stop early: cap the depth, require a minimum number of examples per leaf, or refuse splits whose gain falls below a threshold.</li>
+<li><strong>Post-pruning</strong> — grow the full tree, then remove branches that do not improve accuracy on a validation set. More expensive and usually better, because it only removes what was actually useless.</li>
 </ul>
 
 <div class="box warn">
-<span class="box-label">Why accuracy alone picks bad trees</span>
-<p>Information gain is biased toward attributes with many distinct values. An ID column would have a gain of 1.0 — it splits every row into its own pure leaf — and would be chosen as the root every time, while being completely useless. That is why real implementations also require a minimum samples-per-leaf.</p>
+<span class="box-label">Exam trap</span>
+<p>Information gain is biased toward attributes with many distinct values. A unique identifier column would split every example into its own pure leaf, giving a gain of exactly \(H(S)\) — the maximum possible — while being completely useless. This is why real implementations impose a minimum samples-per-leaf alongside the gain criterion.</p>
 </div>
 
 <h2 id="check">Check your understanding</h2>
 
 <div class="quiz">
-  <div class="qtext">A node contains 10 positives and 10 negatives. What is its entropy?</div>
+  <div class="qtext">A node has 10 positives and 10 negatives. Its entropy is 1 bit. After splitting on an attribute, the weighted average branch entropy is 0.4. What is the information gain?</div>
   <div class="opts">
-    <button class="opt">0</button>
-    <button class="opt" data-correct>1 bit</button>
-    <button class="opt">0.5 bits</button>
-    <button class="opt">10 bits</button>
+    <button class="opt">0.4 bits</button>
+    <button class="opt" data-correct>0.6 bits</button>
+    <button class="opt">1.4 bits</button>
+    <button class="opt">0.04 bits</button>
   </div>
-  <div class="fb">With p = q = 0.5: H = −(0.5 log₂ 0.5 + 0.5 log₂ 0.5) = −(0.5(−1) + 0.5(−1)) = 1 bit. For two classes, entropy is maximised at a 50/50 split and is 0 when the node is pure.</div>
+  <div class="fb">Gain = entropy before − information taken = 1.0 − 0.4 = 0.6 bits. The 0.4 is the information <em>remaining</em> in the branches; the gain is what the split removed.</div>
+</div>
+
+<div class="quiz">
+  <div class="qtext">On the Sunny branch, Humidity gave a gain of 0.9710 and Temperature gave 0.5710. Why was Humidity chosen?</div>
+  <div class="opts">
+    <button class="opt">Because Humidity has fewer values</button>
+    <button class="opt" data-correct>Because it produced the smallest information taken — both its branches were pure, so nothing remained</button>
+    <button class="opt">Because Temperature was already used at the root</button>
+    <button class="opt">Because gains are chosen at random among ties</button>
+  </div>
+  <div class="fb">Humidity's information taken was 0 — High gave three No, Normal gave two Yes — so its gain equalled the full branch entropy of 0.9710. Temperature left one branch impure (Mild was 1 Yes, 1 No), so 0.4000 of information remained and only 0.5710 was gained. There was no tie; the gap is large.</div>
+</div>
+
+<div class="quiz">
+  <div class="qtext">Why does the Overcast branch become a leaf immediately, at depth 1?</div>
+  <div class="opts">
+    <button class="opt">Because it has the fewest examples</button>
+    <button class="opt" data-correct>Because all four examples in it are Yes, so its entropy is already 0</button>
+    <button class="opt">Because no attributes remain to test</button>
+    <button class="opt">Because Overcast was the middle value</button>
+  </div>
+  <div class="fb">A node with entropy 0 is pure and cannot be improved — any further split would produce children that all predict the same class, adding nodes without adding information. The recursion stops on purity, not on depth or on running out of attributes (although that is the other stopping condition, handled by taking a majority vote).</div>
 </div>
 
 <!--TOPIC:08-knn|K-Nearest Neighbours|-->
@@ -315,32 +573,6 @@ d(a,b) = \sqrt{\sum_{j=1}^{d}(a_j - b_j)^2}
 <div class="box warn">
 <span class="box-label">The curse of dimensionality</span>
 <p>As the number of features grows, points that seemed close become far apart — in high dimensions the ratio of nearest to farthest neighbour distance approaches 1, so "nearest" stops meaning anything. KNN degrades badly beyond roughly 10–20 features unless you reduce dimensionality first. This is the standard exam criticism of KNN.</p>
-</div>
-
-<h2 id="code">Implementation</h2>
-
-<div class="codeblock">
-  <div class="codeblock-header"><span class="lang">Python</span><span class="file">knn.py</span><button class="copy-btn">Copy</button></div>
-<pre><code class="language-python">from collections import Counter
-from math import sqrt
-
-
-def knn_predict(train_X, train_y, query, k=3):
-    """Majority vote among the k nearest training points."""
-    distances = []
-    for x, label in zip(train_X, train_y):
-        d = sqrt(sum((a - b) ** 2 for a, b in zip(x, query)))
-        distances.append((d, label))
-
-    distances.sort(key=lambda t: t[0])
-    nearest = [label for _, label in distances[:k]]
-    return Counter(nearest).most_common(1)[0][0]
-
-
-if __name__ == "__main__":
-    X = [(1, 1), (2, 2), (3, 1), (5, 5)]
-    y = ["A", "A", "B", "B"]
-    print(knn_predict(X, y, (3, 2), k=3))   # A</code></pre>
 </div>
 
 <h2 id="check">Check your understanding</h2>
