@@ -36,12 +36,11 @@ Chapters 11, 12 and 13 each get their own part with:
 - **two fully solved examples** each, with every distance and every arithmetic step shown
 - parameter-choice guidance
 - a comparison table against the other clustering methods
-- a Python implementation plus the scikit-learn equivalent
 - two self-check quizzes with explanations
 
 ## Features
 
-- **Pseudocode and Python** for every algorithm, with complexity annotated
+- **Pseudocode** for every algorithm, with complexity annotated
 - **Four visualizers** — gradient descent, k-means stepper, metrics calculator, entropy explorer
 - **Search** — press `/` or click the box; indexes every chapter and section heading
 - **Progress tracking** — a *Mark this chapter complete* checkbox per chapter, stored in `localStorage`
