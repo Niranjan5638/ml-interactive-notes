@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>11 · k-Means Clustering · ML Notes</title>
+<meta name="description" content="Partitioning points into k groups by alternating assignment and centroid updates.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,400&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']] },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+  };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css">
+</head>
+<body data-page="topic-11-kmeans">
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../index.html">ML<span>.</span>Notes</a>
+    <nav class="topnav">
+      <a href="../index.html">Home</a>
+      <a href="../topics/01-framework.html">Chapters</a>
+      <a href="../visualizers.html">Visualizers</a>
+      <a href="../practice.html">Practice</a>
+      <a href="../glossary.html">Glossary</a>
+    </nav>
+    <div class="searchbox">
+      <input id="search-input" type="search" placeholder="Search topics…  ( / )" autocomplete="off" aria-label="Search the textbook">
+      <div class="searchresults" id="search-results"></div>
+    </div>
+  </div>
+</header>
+<div class="shell">
+<nav class="sidebar" aria-label="Chapter navigation">
+<div class="side-group">Foundations</div>
+<a href="../topics/01-framework.html" data-topic-id="topic-01-framework">01 · The Machine-Learning Framework</a>
+<div class="side-group">Supervised Learning — Regression</div>
+<a href="../topics/02-linear-regression.html" data-topic-id="topic-02-linear-regression">02 · Linear Regression and Gradient Descent</a>
+<a href="../topics/03-regression-metrics.html" data-topic-id="topic-03-regression-metrics">03 · Regression Metrics</a>
+<a href="../topics/04-bias-variance.html" data-topic-id="topic-04-bias-variance">04 · Bias, Variance and Regularisation</a>
+<div class="side-group">Supervised Learning — Classification</div>
+<a href="../topics/05-logistic-regression.html" data-topic-id="topic-05-logistic-regression">05 · Logistic Regression</a>
+<a href="../topics/06-naive-bayes.html" data-topic-id="topic-06-naive-bayes">06 · Naive Bayes</a>
+<a href="../topics/07-decision-trees.html" data-topic-id="topic-07-decision-trees">07 · Decision Trees</a>
+<a href="../topics/08-knn.html" data-topic-id="topic-08-knn">08 · K-Nearest Neighbours</a>
+<a href="../topics/09-classification-metrics.html" data-topic-id="topic-09-classification-metrics">09 · Classification Metrics</a>
+<a href="../topics/10-svm.html" data-topic-id="topic-10-svm">10 · Support Vector Machines</a>
+<div class="side-group">Unsupervised Learning — Clustering</div>
+<a href="../topics/11-kmeans.html" data-topic-id="topic-11-kmeans" class="active">11 · k-Means Clustering</a>
+<a href="../topics/12-dbscan.html" data-topic-id="topic-12-dbscan">12 · DBSCAN</a>
+<a href="../topics/13-optics.html" data-topic-id="topic-13-optics">13 · OPTICS</a>
+<a href="../topics/14-hierarchical.html" data-topic-id="topic-14-hierarchical">14 · Hierarchical Clustering</a>
+<div class="side-group">Tools</div>
+<a href="../visualizers.html">Interactive Visualizers</a>
+<a href="../practice.html">Practice and Examination Questions</a>
+<a href="../glossary.html">Glossary</a>
+</nav>
+<main>
+<div class="kicker">Chapter 11</div>
+<h1>k-Means Clustering</h1>
+<p class="lede">Partitioning points into k groups by alternating assignment and centroid updates.</p>
+<label class="chapter-check"><input type="checkbox" data-complete="topic-11-kmeans" aria-label="Mark this chapter complete"><span class="cc-text">Mark this chapter complete</span></label>
+<h2 id="problem">The problem k-means solves</h2>
+
+<p>You have data with no labels and you believe it falls into groups. k-means answers: <em>given k, what is the best way to partition these points into k groups?</em></p>
+
+<div class="box def">
+<span class="box-label">Formal statement</span>
+<p>Given \(n\) points \(x_1,\ldots,x_n\) in \(\mathbb{R}^d\) and an integer \(k\), find \(k\) centroids \(\mu_1,\ldots,\mu_k\) and an assignment of each point to one centroid, minimising the <strong>within-cluster sum of squares</strong>:</p>
+\[
+\text{SSE} = \sum_{i=1}^{k}\ \sum_{x \in C_i} \|x - \mu_i\|^2
+\]
+<p>where \(C_i\) is the set of points assigned to centroid \(i\), and \(\mu_i = \frac{1}{|C_i|}\sum_{x\in C_i} x\) is their mean.</p>
+</div>
+
+<p>SSE is also called <em>inertia</em> in scikit-learn. It is the sum of squared distances from each point to its own centroid, so smaller is tighter.</p>
+
+<div class="box why">
+<span class="box-label">Why this objective, and why it is hard</span>
+<p>Finding the globally optimal partition is NP-hard — the number of ways to split \(n\) points into \(k\) groups is a Stirling number, astronomically large. k-means does not solve that problem. It finds a <strong>local</strong> optimum by alternating two easy steps, which is fast and usually good enough.</p>
+</div>
+
+<h2 id="algorithm">The algorithm, step by step</h2>
+
+<ol>
+<li><strong>Choose k</strong> and <strong>initialise k centroids</strong>. Randomly, or by k-means++ (pick each new centroid with probability proportional to its squared distance from the nearest existing centroid — this is what scikit-learn does by default and it reduces bad local optima).</li>
+<li><strong>Assignment step.</strong> For every point, compute the distance to every centroid and assign the point to the nearest one.</li>
+<li><strong>Update step.</strong> Recompute each centroid as the mean of the points now assigned to it.</li>
+<li><strong>Repeat</strong> steps 2 and 3 until the assignments stop changing (or a maximum iteration count is reached).</li>
+<li><strong>Report</strong> the final centroids and assignments, and the SSE.</li>
+</ol>
+
+<div class="box why">
+<span class="box-label">Why it must terminate</span>
+<p>Each step can only decrease or hold the SSE: assigning each point to its nearest centroid is the best assignment given the centroids, and replacing a centroid by the mean of its members is the best centroid given the assignment. Since there are finitely many possible assignments, the procedure cannot cycle forever — it reaches a fixed point in a finite number of iterations. It may reach a <em>local</em> optimum, not the global one.</p>
+</div>
+
+<div class="viz" id="viz-kmeans">
+  <div class="viz-head">
+    <h3>k-means stepper</h3>
+    <div class="viz-controls">
+      <select data-km="k" aria-label="Number of clusters">
+        <option value="2" selected>k = 2</option>
+        <option value="3">k = 3</option>
+      </select>
+      <button data-km="step">One iteration</button>
+      <button data-km="reset">Reset</button>
+    </div>
+  </div>
+  <div class="viz-stage"></div>
+  <div class="viz-log"></div>
+</div>
+
+<h2 id="ex1">Solved example 1 — two dimensions, k = 2</h2>
+
+<div class="box example">
+<span class="box-label">Points: (1,1), (2,1), (4,3), (5,4). Initial centroids: c₁ = (1,1), c₂ = (5,4)</span>
+
+<p><strong>Iteration 1 — assignment.</strong> Compute Euclidean distance from each point to each centroid.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Point</th><th>d to c₁ (1,1)</th><th>d to c₂ (5,4)</th><th>Assigned</th></tr></thead>
+<tbody>
+<tr><td>(1,1)</td><td>0.00</td><td>5.00</td><td>C₁</td></tr>
+<tr><td>(2,1)</td><td>1.00</td><td>4.24</td><td>C₁</td></tr>
+<tr><td>(4,3)</td><td>3.61</td><td>1.41</td><td>C₂</td></tr>
+<tr><td>(5,4)</td><td>5.00</td><td>0.00</td><td>C₂</td></tr>
+</tbody></table></div>
+<p><strong>Iteration 1 — update.</strong> \(c_1 = \left(\frac{1+2}{2}, \frac{1+1}{2}\right) = (1.5, 1)\) and \(c_2 = \left(\frac{4+5}{2}, \frac{3+4}{2}\right) = (4.5, 3.5)\).</p>
+
+<p><strong>Iteration 2 — assignment.</strong></p>
+<div class="tablewrap"><table>
+<thead><tr><th>Point</th><th>d to c₁ (1.5,1)</th><th>d to c₂ (4.5,3.5)</th><th>Assigned</th></tr></thead>
+<tbody>
+<tr><td>(1,1)</td><td>0.50</td><td>4.30</td><td>C₁</td></tr>
+<tr><td>(2,1)</td><td>0.50</td><td>3.54</td><td>C₁</td></tr>
+<tr><td>(4,3)</td><td>3.20</td><td>0.71</td><td>C₂</td></tr>
+<tr><td>(5,4)</td><td>3.81</td><td>0.71</td><td>C₂</td></tr>
+</tbody></table></div>
+<p>Assignments are unchanged, so the algorithm has <strong>converged</strong>.</p>
+
+<p><strong>Final result.</strong> Clusters \(\{(1,1),(2,1)\}\) and \(\{(4,3),(5,4)\}\).</p>
+<p>\(\text{SSE} = (0.5^2 + 0.5^2) + (0.5^2 + 0.5^2) = 0.5 + 1.0 = \mathbf{1.5}\)</p>
+</div>
+
+<h2 id="ex2">Solved example 2 — one dimension, k = 2</h2>
+
+<div class="box example">
+<span class="box-label">Points: 2, 4, 10, 12, 3, 20, 30, 11, 25. Initial centroids: c₁ = 2, c₂ = 4</span>
+<p>Nine points, one feature. Distance is just absolute difference.</p>
+
+<p><strong>Iteration 1.</strong> Assign each point to the nearer centroid:</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Point</th><th>|x − 2|</th><th>|x − 4|</th><th>Assigned</th></tr></thead>
+<tbody>
+<tr><td>2</td><td>0</td><td>2</td><td>C₁</td></tr>
+<tr><td>4</td><td>2</td><td>0</td><td>C₂</td></tr>
+<tr><td>10</td><td>8</td><td>6</td><td>C₂</td></tr>
+<tr><td>12</td><td>10</td><td>8</td><td>C₂</td></tr>
+<tr><td>3</td><td>1</td><td>1</td><td>C₁ (tie → first)</td></tr>
+<tr><td>20</td><td>18</td><td>16</td><td>C₂</td></tr>
+<tr><td>30</td><td>28</td><td>26</td><td>C₂</td></tr>
+<tr><td>11</td><td>9</td><td>7</td><td>C₂</td></tr>
+<tr><td>25</td><td>23</td><td>21</td><td>C₂</td></tr>
+</tbody></table></div>
+<p>Update: \(c_1 = \frac{2+3}{2} = 2.5\), and \(c_2 = \frac{4+10+12+20+30+11+25}{7} = \frac{112}{7} = 16\).</p>
+
+<p><strong>Iteration 2.</strong> With centroids at 2.5 and 16, point 4 is now closer to 2.5 (distance 1.5) than to 16 (12), so it switches to C₁. Point 10 stays with C₂ (7.5 vs 6).</p>
+<p>\(c_1 = \frac{2+3+4}{3} = 3\), and \(c_2 = \frac{10+12+20+30+11+25}{6} = \frac{108}{6} = 18\).</p>
+
+<p><strong>Iteration 3.</strong> Centroid distance from 10: \(|10-3| = 7\) vs \(|10-18| = 8\) — so <strong>10 switches to C₁</strong>. Point 11: \(|11-3| = 8\) vs \(|11-18| = 7\) — stays with C₂.</p>
+<p>\(c_1 = \frac{2+3+4+10}{4} = 4.75\), and \(c_2 = \frac{11+12+20+25+30}{5} = \frac{98}{5} = 19.6\).</p>
+
+<p><strong>Iteration 4.</strong> Point 12: \(|12-4.75| = 7.25\) vs \(|12-19.6| = 7.6\) — so <strong>12 switches to C₁</strong>.</p>
+<p>\(c_1 = \frac{2+3+4+10+11+12}{6} = 7\), and \(c_2 = \frac{20+25+30}{3} = 25\).</p>
+
+<p><strong>Iteration 5.</strong> Check every point against 7 and 25. Nothing changes: 12 is 5 from 7 and 13 from 25; 20 is 13 from 7 and 5 from 25. <strong>Converged.</strong></p>
+
+<p><strong>Final result.</strong> Clusters \(\{2,3,4,10,11,12\}\) and \(\{20,25,30\}\), centroids 7 and 25.</p>
+<p>\(\text{SSE} = (5^2+4^2+3^2+3^2+4^2+5^2) + (5^2+0+5^2) = 100 + 50 = \mathbf{150}\)</p>
+</div>
+
+<div class="box warn">
+<span class="box-label">What that trace shows</span>
+<p>Notice how long convergence took — five iterations for nine points — and that points 4, 10 and 12 each changed cluster <em>after</em> the first iteration. A single pass is never enough. It also shows the sensitivity to initialisation: starting at 2 and 4 put both centroids inside the same natural group, and the algorithm had to work its way out.</p>
+</div>
+
+<h2 id="choosing-k">Choosing k</h2>
+
+<p>k-means cannot choose \(k\) for you; it must be given. Two standard approaches:</p>
+
+<div class="tablewrap"><table>
+<thead><tr><th>Method</th><th>How</th><th>Limitation</th></tr></thead>
+<tbody>
+<tr><td><strong>Elbow method</strong></td><td>Plot SSE against k; look for the point where the decrease flattens</td><td>The elbow is often ambiguous or absent</td></tr>
+<tr><td><strong>Silhouette score</strong></td><td>For each point, compare its mean distance to its own cluster against the nearest other cluster; average over all points</td><td>Costlier to compute; still a heuristic</td></tr>
+<tr><td><strong>Domain knowledge</strong></td><td>You know there are 3 customer tiers</td><td>Requires the knowledge</td></tr>
+</tbody></table></div>
+
+<p>Silhouette for one point is \(s = \frac{b-a}{\max(a,b)}\) where \(a\) is the mean distance to its own cluster and \(b\) the mean distance to the nearest other cluster. It ranges from −1 (wrong cluster) through 0 (on the boundary) to +1 (well inside).</p>
+
+<h2 id="challenges">The five challenges of k-means</h2>
+
+<ol>
+<li><strong>k must be chosen in advance.</strong> The algorithm has no notion of how many clusters exist.</li>
+<li><strong>Sensitive to initialisation.</strong> Different starting centroids can converge to different local optima with different SSE. k-means++ and multiple restarts mitigate this, not eliminate it.</li>
+<li><strong>Assumes roughly spherical, equal-sized clusters.</strong> Because it minimises squared distance to a centre, it cannot represent elongated or ring-shaped clusters — it will cut a ring in half.</li>
+<li><strong>Sensitive to outliers.</strong> A centroid is a mean, and a mean is dragged by extreme values. One far-away point can pull an entire cluster.</li>
+<li><strong>Every point must be assigned.</strong> There is no notion of noise — a point that belongs to no cluster is forced into the nearest one anyway.</li>
+</ol>
+
+<div class="box warn">
+<span class="box-label">Exam trap</span>
+<p>k-means <strong>always terminates</strong> but not always at the global optimum, and it <strong>always assigns every point</strong> — there are no outliers. Both are frequent true/false questions. If a dataset has genuinely unassignable points, DBSCAN (chapter 12) is the answer, and that is exactly the comparison to make.</p>
+</div>
+
+<h2 id="code">Implementation</h2>
+
+<div class="codeblock">
+  <div class="codeblock-header"><span class="lang">Python</span><span class="file">kmeans.py</span><button class="copy-btn">Copy</button></div>
+<pre><code class="language-python">from math import dist
+
+
+def kmeans(points, k, centroids, max_iter=100):
+    """Lloyd's algorithm. points and centroids are tuples."""
+    for iteration in range(max_iter):
+        # 1. assignment step
+        clusters = [[] for _ in range(k)]
+        for p in points:
+            best = min(range(k), key=lambda i: dist(p, centroids[i]))
+            clusters[best].append(p)
+
+        # 2. update step
+        new_centroids = []
+        for i, group in enumerate(clusters):
+            if not group:
+                new_centroids.append(centroids[i])       # keep an empty cluster's centre
+                continue
+            dims = len(group[0])
+            new_centroids.append(tuple(sum(p[d] for p in group) / len(group) for d in range(dims)))
+
+        if new_centroids == centroids:                   # converged
+            return clusters, centroids, iteration
+        centroids = new_centroids
+
+    return clusters, centroids, max_iter
+
+
+def sse(clusters, centroids):
+    return sum(dist(p, centroids[i]) ** 2 for i, g in enumerate(clusters) for p in g)
+
+
+if __name__ == "__main__":
+    pts = [(1, 1), (2, 1), (4, 3), (5, 4)]
+    groups, cents, it = kmeans(pts, 2, [(1, 1), (5, 4)])
+    print("iterations:", it)          # 1 (converged after the second assignment)
+    print("centroids :", cents)       # [(1.5, 1.0), (4.5, 3.5)]
+    print("SSE       :", sse(groups, cents))   # 1.5</code></pre>
+</div>
+
+<div class="codeblock">
+  <div class="codeblock-header"><span class="lang">Python</span><span class="file">with scikit-learn</span><button class="copy-btn">Copy</button></div>
+<pre><code class="language-python">from sklearn.cluster import KMeans
+
+X = [[1, 1], [2, 1], [4, 3], [5, 4]]
+km = KMeans(n_clusters=2, init="k-means++", n_init=10, random_state=0).fit(X)
+
+print(km.cluster_centers_)   # [[4.5 3.5] [1.5 1. ]]
+print(km.labels_)            # cluster index per point
+print(km.inertia_)           # 1.5 — this is SSE</code></pre>
+</div>
+
+<h2 id="check">Check your understanding</h2>
+
+<div class="quiz">
+  <div class="qtext">In the second solved example, why did point 4 move from cluster 2 to cluster 1 in iteration 2?</div>
+  <div class="opts">
+    <button class="opt">Because the assignment step is random</button>
+    <button class="opt" data-correct>Because the centroids moved to 2.5 and 16, and 4 is nearer 2.5</button>
+    <button class="opt">Because point 4 is an outlier</button>
+    <button class="opt">Because k changed</button>
+  </div>
+  <div class="fb">After iteration 1 the centroids are no longer the initial guesses — they are the means of their groups, 2.5 and 16. Distance from 4 to 2.5 is 1.5, to 16 is 12, so 4 now belongs to cluster 1. This is why a single pass is never sufficient: assignments depend on centroids, and centroids depend on assignments.</div>
+</div>
+
+<div class="quiz">
+  <div class="qtext">Which dataset would k-means handle badly?</div>
+  <div class="opts">
+    <button class="opt">Three well-separated circular blobs</button>
+    <button class="opt" data-correct>Two concentric rings, one inside the other</button>
+    <button class="opt">Points on a straight line with three gaps</button>
+    <button class="opt">Four clusters of different sizes but spherical shape</button>
+  </div>
+  <div class="fb">k-means minimises squared distance to a centroid, so it can only produce convex, roughly spherical regions. Two concentric rings would be cut into left and right halves rather than inner and outer — the correct grouping is not linearly separable by distance to a centre. DBSCAN handles this correctly because it reasons about local density rather than global distance.</div>
+</div>
+<nav class="pager" aria-label="Chapter navigation">
+<a href="../topics/10-svm.html"><span class="dir">← Previous</span><span class="ttl">10 · Support Vector Machines</span></a>
+<a class="next" href="../topics/12-dbscan.html"><span class="dir">Next →</span><span class="ttl">12 · DBSCAN</span></a>
+</nav>
+<footer style="margin-top:56px;padding-top:22px;border-top:1px solid var(--rule);font-size:13px;color:var(--ink-3)">
+  <p style="margin:0 0 6px"><strong style="color:var(--ink-2)">Machine Learning</strong> — an interactive textbook built from the class notes of 27 Aug – 26 Oct 2026, with Alpaydin and Géron as references.</p>
+  <p style="margin:0">Progress is saved in this browser only. <a href="../glossary.html">Glossary</a> · <a href="../practice.html">Practice</a> · <a href="../visualizers.html">Visualizers</a></p>
+</footer>
+</main>
+</div>
+<script>window.ML_SEARCH = [{"title": "01 · The Machine-Learning Framework", "topic": "Chapter", "url": "topics/01-framework.html", "keywords": "machine learning, supervised, unsupervised, reinforcement, train test split, workflow What it means to learn from data, and how the whole subject divides."}, {"title": "02 · Linear Regression and Gradient Descent", "topic": "Chapter", "url": "topics/02-linear-regression.html", "keywords": "linear regression, hypothesis, cost function, gradient descent, learning rate, MSE Fitting a line by minimising squared error, and how gradient descent finds the minimum."}, {"title": "03 · Regression Metrics", "topic": "Chapter", "url": "topics/03-regression-metrics.html", "keywords": "MSE, MAE, RMSE, R squared, coefficient of determination, SSres, SStot MSE, MAE, RMSE and R-squared: what each one rewards and punishes."}, {"title": "04 · Bias, Variance and Regularisation", "topic": "Chapter", "url": "topics/04-bias-variance.html", "keywords": "bias, variance, underfitting, overfitting, regularisation, Lasso, Ridge, Elastic Net, L1, L2 Why a model that fits the training data perfectly can be worse than one that does not."}, {"title": "05 · Logistic Regression", "topic": "Chapter", "url": "topics/05-logistic-regression.html", "keywords": "logistic regression, sigmoid, log odds, decision boundary, log loss, cross entropy Turning a linear model into a classifier with the sigmoid and log-loss."}, {"title": "06 · Naive Bayes", "topic": "Chapter", "url": "topics/06-naive-bayes.html", "keywords": "naive bayes, Bayes theorem, prior, likelihood, posterior, evidence, Laplace smoothing Classification by Bayes theorem under a deliberately naive independence assumption."}, {"title": "07 · Decision Trees", "topic": "Chapter", "url": "topics/07-decision-trees.html", "keywords": "decision tree, entropy, information gain, Gini impurity, ID3, pruning Splitting the feature space by whichever question reduces impurity the most."}, {"title": "08 · K-Nearest Neighbours", "topic": "Chapter", "url": "topics/08-knn.html", "keywords": "KNN, k nearest neighbours, Euclidean distance, majority vote, lazy learner, curse of dimensionality The laziest classifier there is: look at the neighbours and take a vote."}, {"title": "09 · Classification Metrics", "topic": "Chapter", "url": "topics/09-classification-metrics.html", "keywords": "confusion matrix, accuracy, precision, recall, F1, sensitivity, specificity The confusion matrix, and why accuracy alone can be dangerously misleading."}, {"title": "10 · Support Vector Machines", "topic": "Chapter", "url": "topics/10-svm.html", "keywords": "SVM, support vector machine, hyperplane, margin, hard margin, soft margin, dual, kernel Finding the widest street between two classes, and the kernel trick for when a line will not do."}, {"title": "11 · k-Means Clustering", "topic": "Chapter", "url": "topics/11-kmeans.html", "keywords": "k-means, clustering, centroid, Lloyd, SSE, elbow method, unsupervised Partitioning points into k groups by alternating assignment and centroid updates."}, {"title": "12 · DBSCAN", "topic": "Chapter", "url": "topics/12-dbscan.html", "keywords": "DBSCAN, density, eps, minPts, core point, border point, noise, clustering Density-based clustering: find dense regions and label the rest as noise."}, {"title": "13 · OPTICS", "topic": "Chapter", "url": "topics/13-optics.html", "keywords": "OPTICS, reachability, core distance, ordering, density, clustering, variable density Ordering points by reachability so clusters of different densities all show up."}, {"title": "14 · Hierarchical Clustering", "topic": "Chapter", "url": "topics/14-hierarchical.html", "keywords": "hierarchical, agglomerative, divisive, dendrogram, linkage, single, complete, average, ward Building a nested tree of clusters bottom-up or top-down, and reading it as a dendrogram."}, {"title": "Interactive Visualizers", "topic": "Tool", "url": "visualizers.html", "keywords": "Gradient descent, k-means, the metrics calculator and an entropy explorer."}, {"title": "Practice and Examination Questions", "topic": "Tool", "url": "practice.html", "keywords": "Graded questions with full worked solutions."}, {"title": "Glossary", "topic": "Tool", "url": "glossary.html", "keywords": "Every term used in the course, defined in one line."}, {"title": "What it means to learn from data", "topic": "Ch 01", "url": "topics/01-framework.html#what", "keywords": "What it means to learn from data"}, {"title": "The three learning types", "topic": "Ch 01", "url": "topics/01-framework.html#types", "keywords": "The three learning types"}, {"title": "The anatomy of a learning problem", "topic": "Ch 01", "url": "topics/01-framework.html#anatomy", "keywords": "The anatomy of a learning problem"}, {"title": "The workflow, and where it goes wrong", "topic": "Ch 01", "url": "topics/01-framework.html#workflow", "keywords": "The workflow, and where it goes wrong"}, {"title": "Check your understanding", "topic": "Ch 01", "url": "topics/01-framework.html#check", "keywords": "Check your understanding"}, {"title": "The hypothesis", "topic": "Ch 02", "url": "topics/02-linear-regression.html#hypothesis", "keywords": "The hypothesis"}, {"title": "The cost function", "topic": "Ch 02", "url": "topics/02-linear-regression.html#cost", "keywords": "The cost function"}, {"title": "The gradient", "topic": "Ch 02", "url": "topics/02-linear-regression.html#gradient", "keywords": "The gradient"}, {"title": "The update rule", "topic": "Ch 02", "url": "topics/02-linear-regression.html#gd", "keywords": "The update rule"}, {"title": "Implementation", "topic": "Ch 02", "url": "topics/02-linear-regression.html#python", "keywords": "Implementation"}, {"title": "Three practical notes", "topic": "Ch 02", "url": "topics/02-linear-regression.html#pitfalls", "keywords": "Three practical notes"}, {"title": "Check your understanding", "topic": "Ch 02", "url": "topics/02-linear-regression.html#check", "keywords": "Check your understanding"}, {"title": "Why one number is not enough", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#why", "keywords": "Why one number is not enough"}, {"title": "Mean squared error", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#mse", "keywords": "Mean squared error"}, {"title": "Mean absolute error", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#mae", "keywords": "Mean absolute error"}, {"title": "Root mean squared error", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#rmse", "keywords": "Root mean squared error"}, {"title": "Coefficient of determination", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#r2", "keywords": "Coefficient of determination"}, {"title": "Check your understanding", "topic": "Ch 03", "url": "topics/03-regression-metrics.html#check", "keywords": "Check your understanding"}, {"title": "Bias and variance defined", "topic": "Ch 04", "url": "topics/04-bias-variance.html#defs", "keywords": "Bias and variance defined"}, {"title": "Underfitting and overfitting", "topic": "Ch 04", "url": "topics/04-bias-variance.html#underover", "keywords": "Underfitting and overfitting"}, {"title": "Regularisation", "topic": "Ch 04", "url": "topics/04-bias-variance.html#reg", "keywords": "Regularisation"}, {"title": "Check your understanding", "topic": "Ch 04", "url": "topics/04-bias-variance.html#check", "keywords": "Check your understanding"}, {"title": "Why linear regression cannot be reused", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#why", "keywords": "Why linear regression cannot be reused"}, {"title": "The sigmoid", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#sigmoid", "keywords": "The sigmoid"}, {"title": "Odds and log-odds", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#odds", "keywords": "Odds and log-odds"}, {"title": "The decision boundary", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#boundary", "keywords": "The decision boundary"}, {"title": "The cost function, and why not squared error", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#cost", "keywords": "The cost function, and why not squared error"}, {"title": "The gradient", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#gradient", "keywords": "The gradient"}, {"title": "More than two classes", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#multiclass", "keywords": "More than two classes"}, {"title": "Check your understanding", "topic": "Ch 05", "url": "topics/05-logistic-regression.html#check", "keywords": "Check your understanding"}, {"title": "Classification by probability", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#idea", "keywords": "Classification by probability"}, {"title": "The naive assumption", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#assumption", "keywords": "The naive assumption"}, {"title": "Worked example — the Play Tennis dataset", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#worked", "keywords": "Worked example — the Play Tennis dataset"}, {"title": "The zero-frequency problem", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#zero", "keywords": "The zero-frequency problem"}, {"title": "Continuous features", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#continuous", "keywords": "Continuous features"}, {"title": "Implementation", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#code", "keywords": "Implementation"}, {"title": "Check your understanding", "topic": "Ch 06", "url": "topics/06-naive-bayes.html#check", "keywords": "Check your understanding"}, {"title": "Splitting the feature space", "topic": "Ch 07", "url": "topics/07-decision-trees.html#idea", "keywords": "Splitting the feature space"}, {"title": "Entropy", "topic": "Ch 07", "url": "topics/07-decision-trees.html#entropy", "keywords": "Entropy"}, {"title": "Information gain", "topic": "Ch 07", "url": "topics/07-decision-trees.html#ig", "keywords": "Information gain"}, {"title": "Worked example — the Tennis root node", "topic": "Ch 07", "url": "topics/07-decision-trees.html#worked", "keywords": "Worked example — the Tennis root node"}, {"title": "Gini impurity", "topic": "Ch 07", "url": "topics/07-decision-trees.html#gini", "keywords": "Gini impurity"}, {"title": "Pruning", "topic": "Ch 07", "url": "topics/07-decision-trees.html#pruning", "keywords": "Pruning"}, {"title": "Check your understanding", "topic": "Ch 07", "url": "topics/07-decision-trees.html#check", "keywords": "Check your understanding"}, {"title": "The laziest classifier", "topic": "Ch 08", "url": "topics/08-knn.html#idea", "keywords": "The laziest classifier"}, {"title": "The distance metric", "topic": "Ch 08", "url": "topics/08-knn.html#distance", "keywords": "The distance metric"}, {"title": "Worked example", "topic": "Ch 08", "url": "topics/08-knn.html#worked", "keywords": "Worked example"}, {"title": "Choosing k", "topic": "Ch 08", "url": "topics/08-knn.html#k", "keywords": "Choosing k"}, {"title": "Implementation", "topic": "Ch 08", "url": "topics/08-knn.html#code", "keywords": "Implementation"}, {"title": "Check your understanding", "topic": "Ch 08", "url": "topics/08-knn.html#check", "keywords": "Check your understanding"}, {"title": "The confusion matrix", "topic": "Ch 09", "url": "topics/09-classification-metrics.html#cm", "keywords": "The confusion matrix"}, {"title": "The four metrics", "topic": "Ch 09", "url": "topics/09-classification-metrics.html#metrics", "keywords": "The four metrics"}, {"title": "Worked example", "topic": "Ch 09", "url": "topics/09-classification-metrics.html#worked", "keywords": "Worked example"}, {"title": "Why accuracy alone is not enough", "topic": "Ch 09", "url": "topics/09-classification-metrics.html#accuracy", "keywords": "Why accuracy alone is not enough"}, {"title": "Check your understanding", "topic": "Ch 09", "url": "topics/09-classification-metrics.html#check", "keywords": "Check your understanding"}, {"title": "The widest street", "topic": "Ch 10", "url": "topics/10-svm.html#idea", "keywords": "The widest street"}, {"title": "The equation of a hyperplane", "topic": "Ch 10", "url": "topics/10-svm.html#equation", "keywords": "The equation of a hyperplane"}, {"title": "Maximising the margin", "topic": "Ch 10", "url": "topics/10-svm.html#margin", "keywords": "Maximising the margin"}, {"title": "The hard-margin objective", "topic": "Ch 10", "url": "topics/10-svm.html#hard", "keywords": "The hard-margin objective"}, {"title": "The dual formulation", "topic": "Ch 10", "url": "topics/10-svm.html#dual", "keywords": "The dual formulation"}, {"title": "The soft margin", "topic": "Ch 10", "url": "topics/10-svm.html#soft", "keywords": "The soft margin"}, {"title": "The kernel trick", "topic": "Ch 10", "url": "topics/10-svm.html#kernel", "keywords": "The kernel trick"}, {"title": "Check your understanding", "topic": "Ch 10", "url": "topics/10-svm.html#check", "keywords": "Check your understanding"}, {"title": "The problem k-means solves", "topic": "Ch 11", "url": "topics/11-kmeans.html#problem", "keywords": "The problem k-means solves"}, {"title": "The algorithm, step by step", "topic": "Ch 11", "url": "topics/11-kmeans.html#algorithm", "keywords": "The algorithm, step by step"}, {"title": "Solved example 1 — two dimensions, k = 2", "topic": "Ch 11", "url": "topics/11-kmeans.html#ex1", "keywords": "Solved example 1 — two dimensions, k = 2"}, {"title": "Solved example 2 — one dimension, k = 2", "topic": "Ch 11", "url": "topics/11-kmeans.html#ex2", "keywords": "Solved example 2 — one dimension, k = 2"}, {"title": "Choosing k", "topic": "Ch 11", "url": "topics/11-kmeans.html#choosing-k", "keywords": "Choosing k"}, {"title": "The five challenges of k-means", "topic": "Ch 11", "url": "topics/11-kmeans.html#challenges", "keywords": "The five challenges of k-means"}, {"title": "Implementation", "topic": "Ch 11", "url": "topics/11-kmeans.html#code", "keywords": "Implementation"}, {"title": "Check your understanding", "topic": "Ch 11", "url": "topics/11-kmeans.html#check", "keywords": "Check your understanding"}, {"title": "Clustering by density", "topic": "Ch 12", "url": "topics/12-dbscan.html#idea", "keywords": "Clustering by density"}, {"title": "The definitions", "topic": "Ch 12", "url": "topics/12-dbscan.html#definitions", "keywords": "The definitions"}, {"title": "The algorithm, step by step", "topic": "Ch 12", "url": "topics/12-dbscan.html#algorithm", "keywords": "The algorithm, step by step"}, {"title": "Solved example 1 — eps = 1.5, MinPts = 3", "topic": "Ch 12", "url": "topics/12-dbscan.html#ex1", "keywords": "Solved example 1 — eps = 1.5, MinPts = 3"}, {"title": "Solved example 2 — the same points with eps = 0.9", "topic": "Ch 12", "url": "topics/12-dbscan.html#ex2", "keywords": "Solved example 2 — the same points with eps = 0.9"}, {"title": "Choosing eps and MinPts", "topic": "Ch 12", "url": "topics/12-dbscan.html#params", "keywords": "Choosing eps and MinPts"}, {"title": "Strengths and weaknesses", "topic": "Ch 12", "url": "topics/12-dbscan.html#compare", "keywords": "Strengths and weaknesses"}, {"title": "Implementation", "topic": "Ch 12", "url": "topics/12-dbscan.html#code", "keywords": "Implementation"}, {"title": "Check your understanding", "topic": "Ch 12", "url": "topics/12-dbscan.html#check", "keywords": "Check your understanding"}, {"title": "The problem with a global eps", "topic": "Ch 13", "url": "topics/13-optics.html#why", "keywords": "The problem with a global eps"}, {"title": "The two new quantities", "topic": "Ch 13", "url": "topics/13-optics.html#definitions", "keywords": "The two new quantities"}, {"title": "The algorithm, step by step", "topic": "Ch 13", "url": "topics/13-optics.html#algorithm", "keywords": "The algorithm, step by step"}, {"title": "Solved example 1 — a full ordering, computed by hand", "topic": "Ch 13", "url": "topics/13-optics.html#ex1", "keywords": "Solved example 1 — a full ordering, computed by hand"}, {"title": "Solved example 2 — two clusters of very different density", "topic": "Ch 13", "url": "topics/13-optics.html#ex2", "keywords": "Solved example 2 — two clusters of very different density"}, {"title": "Extracting clusters from the ordering", "topic": "Ch 13", "url": "topics/13-optics.html#extract", "keywords": "Extracting clusters from the ordering"}, {"title": "DBSCAN versus OPTICS", "topic": "Ch 13", "url": "topics/13-optics.html#compare", "keywords": "DBSCAN versus OPTICS"}, {"title": "Implementation", "topic": "Ch 13", "url": "topics/13-optics.html#code", "keywords": "Implementation"}, {"title": "Check your understanding", "topic": "Ch 13", "url": "topics/13-optics.html#check", "keywords": "Check your understanding"}, {"title": "A tree instead of a partition", "topic": "Ch 14", "url": "topics/14-hierarchical.html#idea", "keywords": "A tree instead of a partition"}, {"title": "Linkage — how to measure distance between clusters", "topic": "Ch 14", "url": "topics/14-hierarchical.html#linkage", "keywords": "Linkage — how to measure distance between clusters"}, {"title": "Solved example 1 — single linkage", "topic": "Ch 14", "url": "topics/14-hierarchical.html#ex1", "keywords": "Solved example 1 — single linkage"}, {"title": "Solved example 2 — the same points with complete linkage", "topic": "Ch 14", "url": "topics/14-hierarchical.html#ex2", "keywords": "Solved example 2 — the same points with complete linkage"}, {"title": "Reading a dendrogram", "topic": "Ch 14", "url": "topics/14-hierarchical.html#dendrogram", "keywords": "Reading a dendrogram"}, {"title": "Compared with the other methods", "topic": "Ch 14", "url": "topics/14-hierarchical.html#compare", "keywords": "Compared with the other methods"}, {"title": "Check your understanding", "topic": "Ch 14", "url": "topics/14-hierarchical.html#check", "keywords": "Check your understanding"}];</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
