@@ -1,0 +1,200 @@
+<!--TOPIC:14-hierarchical|Hierarchical Clustering|-->
+<div class="box note" style="background:var(--amber-soft);border:1px solid rgba(161,98,7,.24);border-radius:6px;padding:12px 16px;margin:0 0 18px">
+<span class="box-label" style="font-family:var(--font-mono);font-size:9px;letter-spacing:1.8px;text-transform:uppercase;color:var(--amber);font-weight:700;margin-bottom:5px;display:block">Textbook-supplied</span>
+<p style="margin:0">Your class notes list hierarchical clustering as agglomerative and divisive but never develop it. This chapter is built from Alpaydin chapter 7.</p>
+</div>
+
+<h2 id="idea">A tree instead of a partition</h2>
+
+<p>k-means, DBSCAN and OPTICS all produce a flat partition: each point gets one label. Hierarchical clustering produces something richer — a <strong>nested sequence</strong> of clusterings, from every point alone at the bottom to everything together at the top. You then cut the tree at whatever level gives the number of clusters you want.</p>
+
+<div class="tablewrap"><table>
+<thead><tr><th>Direction</th><th>Starts with</th><th>Repeats until</th></tr></thead>
+<tbody>
+<tr><td><strong>Agglomerative</strong> (bottom-up)</td><td>n singleton clusters</td><td>Merge the two closest clusters → one cluster remains</td></tr>
+<tr><td><strong>Divisive</strong> (top-down)</td><td>One cluster containing everything</td><td>Split a cluster into two → n singletons remain</td></tr>
+</tbody></table></div>
+
+<p>Agglomerative is by far the more common, because splitting a cluster optimally is harder than merging two. The rest of this chapter is about agglomerative.</p>
+
+<h2 id="linkage">Linkage — how to measure distance between clusters</h2>
+
+<p>The algorithm needs a distance between <em>clusters</em>, not just points. Four choices, and the choice changes the result:</p>
+
+<div class="tablewrap"><table>
+<thead><tr><th>Linkage</th><th>Distance between clusters A and B</th><th>Character</th></tr></thead>
+<tbody>
+<tr><td><strong>Single</strong> (min)</td><td>\(\min\{d(a,b) : a\in A, b\in B\}\)</td><td>Can follow chains and find elongated shapes; prone to chaining noise into one cluster</td></tr>
+<tr><td><strong>Complete</strong> (max)</td><td>\(\max\{d(a,b)\}\)</td><td>Produces compact, roughly equal clusters; sensitive to outliers</td></tr>
+<tr><td><strong>Average</strong> (UPGMA)</td><td>mean of all cross-pair distances</td><td>Compromise between the two</td></tr>
+<tr><td><strong>Ward</strong></td><td>merge that increases within-cluster variance least</td><td>Usually the best default; produces balanced, spherical clusters</td></tr>
+</tbody></table></div>
+
+<h2 id="ex1">Solved example 1 — single linkage</h2>
+
+<div class="box example">
+<span class="box-label">Points A = 2, B = 5, C = 9, D = 15 on a line</span>
+<p>Pairwise distances: \(d(A,B)=3\), \(d(A,C)=7\), \(d(A,D)=13\), \(d(B,C)=4\), \(d(B,D)=10\), \(d(C,D)=6\).</p>
+
+<p><strong>Step 1.</strong> Closest pair is A–B at distance 3. Merge into {A,B}, record height 3.</p>
+<p><strong>Step 2.</strong> With single linkage, the distance from {A,B} to anything is the <em>minimum</em> over its members:</p>
+<ul>
+<li>\(d(\{A,B\}, C) = \min(7, 4) = 4\)</li>
+<li>\(d(\{A,B\}, D) = \min(13, 10) = 10\)</li>
+<li>\(d(C, D) = 6\)</li>
+</ul>
+<p>Closest is {A,B}–C at 4. Merge, height 4.</p>
+<p><strong>Step 3.</strong> \(d(\{A,B,C\}, D) = \min(10, 6) = 6\). Merge, height 6.</p>
+
+<p><strong>Result:</strong> merges at heights <strong>3, 4, 6</strong>. Cutting at height 5 gives two clusters {A,B,C} and {D}; cutting at height 4 gives {A,B} and {C,D}… no — at height 4 the merge of C has just happened, so cutting just below 4 gives {A,B}, {C}, {D}: three clusters.</p>
+</div>
+
+<h2 id="ex2">Solved example 2 — the same points with complete linkage</h2>
+
+<div class="box example">
+<span class="box-label">Showing that linkage changes the answer</span>
+<p><strong>Step 1.</strong> Closest pair is still A–B at 3. Merge, height 3.</p>
+<p><strong>Step 2.</strong> With complete linkage the distance is the <em>maximum</em> over members:</p>
+<ul>
+<li>\(d(\{A,B\}, C) = \max(7, 4) = 7\)</li>
+<li>\(d(\{A,B\}, D) = \max(13, 10) = 13\)</li>
+<li>\(d(C, D) = 6\)</li>
+</ul>
+<p>Now the closest pair is <strong>C–D at 6</strong>, not {A,B}–C. Merge C and D, height 6.</p>
+<p><strong>Step 3.</strong> \(d(\{A,B\}, \{C,D\}) = \max(7, 13, 4, 10) = 13\). Merge, height 13.</p>
+
+<p><strong>Result:</strong> merges at heights <strong>3, 6, 13</strong>.</p>
+</div>
+
+<div class="box why">
+<span class="box-label">Why the two disagree, and which to trust</span>
+<p>Single linkage merged C into {A,B} early because C was close to <em>one member</em> (B, at 4). Complete linkage refused, because C is far from <em>every</em> member of the other cluster (7 from A). This is the chaining problem in miniature: single linkage will happily build long chains through intermediate points, which is good for elongated shapes and bad for noisy data.</p>
+<p>The practical rule: <strong>Ward</strong> for compact clusters, <strong>single</strong> when you expect irregular shapes and trust your data to be clean, <strong>complete</strong> when you fear outliers.</p>
+</div>
+
+<h2 id="dendrogram">Reading a dendrogram</h2>
+
+<p>A dendrogram is the tree drawn with the merge height on the vertical axis. Three things to read from it:</p>
+
+<ul>
+<li><strong>Where to cut.</strong> A horizontal line at height \(h\) gives the clustering at that similarity level. The number of vertical lines it crosses is the number of clusters.</li>
+<li><strong>Long vertical branches</strong> indicate a large jump in dissimilarity — a natural place to cut, because it means two groups were genuinely far apart before merging.</li>
+<li><strong>The order along the bottom</strong> is arbitrary with respect to the original data; adjacent leaves are similar, but the left-to-right order carries no meaning beyond that.</li>
+</ul>
+
+<h2 id="compare">Compared with the other methods</h2>
+
+<div class="tablewrap"><table>
+<thead><tr><th></th><th>k-means</th><th>DBSCAN</th><th>OPTICS</th><th>Hierarchical</th></tr></thead>
+<tbody>
+<tr><td>Choose k in advance</td><td>Yes</td><td>No</td><td>No</td><td>No — cut the tree afterwards</td></tr>
+<tr><td>Shape of cluster</td><td>Spherical only</td><td>Any shape</td><td>Any shape</td><td>Depends on linkage</td></tr>
+<tr><td>Handles noise</td><td>No</td><td>Yes</td><td>Yes</td><td>No explicit noise label</td></tr>
+<tr><td>Output</td><td>Labels</td><td>Labels</td><td>Ordering</td><td>A dendrogram</td></tr>
+<tr><td>Cost</td><td>\(O(nk)\) per iteration</td><td>\(O(n\log n)\)</td><td>\(O(n\log n)\)</td><td>\(O(n^2\log n)\) or \(O(n^2)\) with a distance matrix</td></tr>
+<tr><td>Varying density</td><td>No</td><td>No</td><td>Yes</td><td>Partly — cut at different heights</td></tr>
+</tbody></table></div>
+
+<div class="box warn">
+<span class="box-label">The cost that limits it</span>
+<p>Agglomerative clustering needs the full pairwise distance matrix — \(O(n^2)\) memory — and \(n-1\) merges, each requiring a search for the closest pair. On 100,000 points that matrix alone is ten billion entries. Hierarchical clustering is for hundreds or a few thousand points, not millions. That is its binding limitation.</p>
+</div>
+
+<h2 id="check">Check your understanding</h2>
+
+<div class="quiz">
+  <div class="qtext">In solved example 1, why did C join {A,B} before D did?</div>
+  <div class="opts">
+    <button class="opt">Because C is closer to the centroid of {A,B} than D is</button>
+    <button class="opt" data-correct>Because single linkage takes the minimum distance, and C is only 4 from B</button>
+    <button class="opt">Because C has a smaller value than D</button>
+    <button class="opt">Because the algorithm processes points in alphabetical order</button>
+  </div>
+  <div class="fb">Single linkage defines cluster distance as the minimum over all cross pairs. C's distance to B is 4, which is less than D's 6 to C and 10 to B. The individual values of the points are irrelevant — only the distances matter. With complete linkage the same C would have been rejected because it is 7 from A.</div>
+</div>
+
+<!--TOPIC:visualizers|Interactive Visualizers|-->
+<p>Four live demonstrations. Each one runs the real algorithm in the browser — nothing is a screenshot — and logs what is happening underneath so you can read the reasoning as the picture changes.</p>
+
+<h2 id="gd">Gradient descent</h2>
+<p>Press <em>Run</em> and watch the line swing toward the least-squares fit. Change the learning rate: at 0.01 it converges smoothly, at 0.12 it overshoots and the cost climbs. The optimum for this data is \(\theta_0 = 0.8667\), \(\theta_1 = 1.0000\).</p>
+
+<div class="viz" id="viz-gd">
+  <div class="viz-head">
+    <h3>Gradient descent on a line fit</h3>
+    <div class="viz-controls">
+      <label style="font-size:12px;color:var(--ink-3)">α</label>
+      <select data-gd="lr" aria-label="Learning rate">
+        <option value="0.001">0.001</option>
+        <option value="0.01" selected>0.01</option>
+        <option value="0.05">0.05</option>
+        <option value="0.12">0.12</option>
+      </select>
+      <button data-gd="step">Step</button>
+      <button data-gd="run">Run</button>
+      <button data-gd="reset">Reset</button>
+    </div>
+  </div>
+  <div class="viz-stage"></div>
+  <div class="viz-log"></div>
+</div>
+
+<h2 id="kmeans">k-means</h2>
+<p>Each press of <em>One iteration</em> performs an assignment step and then an update step — exactly the loop from chapter 11. Watch the SSE fall and the centroids drift. Switch to k = 3 and see it split a natural group in half, which is what happens when you choose the wrong k.</p>
+
+<div class="viz" id="viz-kmeans">
+  <div class="viz-head">
+    <h3>k-means stepper</h3>
+    <div class="viz-controls">
+      <select data-km="k" aria-label="Number of clusters">
+        <option value="2" selected>k = 2</option>
+        <option value="3">k = 3</option>
+      </select>
+      <button data-km="step">One iteration</button>
+      <button data-km="reset">Reset</button>
+    </div>
+  </div>
+  <div class="viz-stage"></div>
+  <div class="viz-log"></div>
+</div>
+
+<h2 id="metrics">Metrics calculator</h2>
+<p>Change the four cells of the confusion matrix and watch all four metrics move together. Try the imbalanced case — set TP = 5, FN = 45, FP = 2, TN = 948 — and note that accuracy stays above 0.95 while recall collapses to 0.1.</p>
+
+<div class="viz" id="viz-metrics">
+  <div class="viz-head">
+    <h3>Classification metrics</h3>
+    <div class="viz-controls">
+      <label style="font-size:12px;color:var(--ink-3)">TP</label>
+      <input type="number" data-m="tp" value="40" min="0" style="width:58px">
+      <label style="font-size:12px;color:var(--ink-3)">FP</label>
+      <input type="number" data-m="fp" value="10" min="0" style="width:58px">
+      <label style="font-size:12px;color:var(--ink-3)">FN</label>
+      <input type="number" data-m="fn" value="15" min="0" style="width:58px">
+      <label style="font-size:12px;color:var(--ink-3)">TN</label>
+      <input type="number" data-m="tn" value="35" min="0" style="width:58px">
+    </div>
+  </div>
+  <div class="viz-stage"></div>
+  <div class="viz-log"></div>
+</div>
+
+<h2 id="entropy">Entropy</h2>
+<p>Set the class counts and read the impurity. A pure node gives 0; a 50/50 split gives 1 bit, which is the maximum for two classes. This is the quantity the root of every decision tree is trying to reduce.</p>
+
+<div class="viz" id="viz-entropy">
+  <div class="viz-head">
+    <h3>Entropy explorer</h3>
+    <div class="viz-controls">
+      <label style="font-size:12px;color:var(--ink-3)">positives</label>
+      <input type="number" data-e="pos" value="9" min="0" max="40" style="width:62px">
+      <label style="font-size:12px;color:var(--ink-3)">negatives</label>
+      <input type="number" data-e="neg" value="5" min="0" max="40" style="width:62px">
+    </div>
+  </div>
+  <div class="viz-stage"></div>
+  <div class="viz-log"></div>
+</div>
+
+<h2 id="offline">Dependencies</h2>
+<p>The visualizers are plain JavaScript with no library and run offline once cached. The only external dependencies on the site are Google Fonts (typography), MathJax (equations) and Prism (syntax highlighting). All three degrade gracefully: text falls back to system fonts, equations remain readable, and code appears unstyled but correct.</p>
